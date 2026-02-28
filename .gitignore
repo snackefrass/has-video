@@ -18,9 +18,19 @@ npm-debug.log*
 # Electron build cache
 .cache/
 
-# OS files
+# macOS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.TemporaryItems
+__MACOSX
+
+# Windows
 Thumbs.db
+ehthumbs.db
 
 # Editor directories
 .vscode/
