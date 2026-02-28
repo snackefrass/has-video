@@ -1,0 +1,321 @@
+/* Settings Page Layout */
+.settings-page {
+    padding: 0 6.67vw 5.56vh 0; /* No left padding, no indent */
+    /* overflow handled by .content-area parent */
+}
+
+.settings-page::-webkit-scrollbar {
+    display: none;
+}
+
+.settings-container {
+    max-width: 66.67vw; /* 1280px at 1920px width */
+    margin-left: 3.33vw; /* 64px left margin to avoid nav cutoff */
+}
+
+/* Settings Headings */
+.settings-heading {
+    font-family: 'Degular Display', 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 96px;
+    line-height: 78px;
+    color: var(--text-primary);
+    margin-bottom: 3.70vh; /* 40px */
+    margin-top: 0;
+}
+
+.settings-heading:not(:first-child) {
+    margin-top: 7.41vh; /* 80px spacing between sections */
+}
+
+/* Settings Section */
+.settings-section {
+    background: transparent; /* Removed background fill */
+    border-radius: 1.11vh; /* 12px */
+    padding: 0; /* No padding for left alignment */
+    margin-bottom: 2.22vh; /* 24px */
+}
+
+/* Settings Item */
+.settings-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px; /* 24px padding all around */
+    margin-bottom: 24px; /* Gap between options */
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.settings-item:last-child {
+    margin-bottom: 0; /* No gap after last item */
+}
+
+.settings-item.focused {
+    background: rgba(255, 255, 255, 0.2); /* 20% white */
+    border-radius: 0.93vh; /* 10px */
+}
+
+/* Special red styling for Clear Watch History */
+.settings-item.focused.clear-history {
+    background: rgba(252, 95, 95, 0.2); /* 20% red */
+}
+
+.settings-item-content {
+    flex: 1;
+}
+
+.settings-item-title {
+    font-family: 'Degular Display', 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 34px;
+    line-height: 28px;
+    color: var(--text-primary);
+    margin-bottom: 0.56vh; /* 6px */
+}
+
+.settings-item-description {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 24px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-item-action {
+    margin-left: 3.70vh; /* 40px */
+}
+
+/* Settings Button */
+.settings-button {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 500;
+    font-size: 24px;
+    color: var(--text-primary);
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3); /* Subtle stroke by default */
+    padding: 1.11vh 2.78vh; /* 12px 30px */
+    border-radius: 0.93vh; /* 10px */
+    transition: all 0.2s ease;
+}
+
+.settings-button-danger {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: var(--text-primary);
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 500;
+    font-size: 24px;
+}
+
+.settings-item.focused .settings-button {
+    background: rgba(var(--accent-rgb), 0.2); /* 20% accent fill */
+    border-color: var(--accent); /* Accent stroke */
+    color: var(--text-primary);
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600; /* Semibold on focus */
+}
+
+.settings-item.focused.clear-history .settings-button-danger {
+    background: rgba(var(--error-rgb), 0.2); /* 20% error fill */
+    border-color: var(--error); /* Error stroke */
+    color: var(--text-primary);
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600; /* Semibold on focus */
+}
+
+/* Settings Info */
+.settings-item-info {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 24px;
+    color: rgba(255, 255, 255, 0.5);
+    padding-top: 12px;
+    margin-top: 12px;
+}
+
+/* Input Fields */
+.settings-item-input {
+    cursor: default;
+}
+
+.settings-input {
+    width: 100%;
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-primary);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.93vh; /* 10px */
+    padding: 1.11vh 1.85vh; /* 12px 20px */
+    margin-top: 0.93vh; /* 10px */
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.settings-input:focus,
+.settings-item.focused .settings-input {
+    border-color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.05);
+}
+
+/* Toggle Switch */
+.settings-toggle {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 500;
+    font-size: 24px;
+    color: var(--text-primary);
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 1.11vh 2.78vh; /* 12px 30px */
+    border-radius: 0.93vh; /* 10px */
+    transition: all 0.2s ease;
+}
+
+.settings-toggle.active {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: var(--text-primary);
+}
+
+/* Toggle OFF state when focused - red */
+.settings-item.focused .settings-toggle {
+    background: rgba(var(--error-rgb), 0.2); /* 20% red fill */
+    border-color: var(--error); /* Red stroke */
+    color: var(--text-primary);
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+}
+
+/* Toggle ON state when focused - green */
+.settings-item.focused .settings-toggle.active {
+    background: rgba(var(--success-rgb), 0.2); /* 20% green fill */
+    border-color: var(--success); /* Green stroke */
+    color: var(--text-primary);
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+}
+
+/* Color Swatches */
+.color-swatches {
+    display: flex;
+    gap: 12px;
+}
+
+.color-swatch {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 3px solid transparent;
+}
+
+.color-swatch.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.3);
+}
+
+.color-swatch.focused-swatch {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.5);
+    transform: scale(1.1);
+}
+
+.settings-item.focused .color-swatch {
+    opacity: 1;
+}
+
+.settings-item.focused .color-swatch.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.4);
+}
+
+/* Loading/Success States */
+.settings-item.loading .settings-button {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.4);
+    pointer-events: none;
+}
+
+.settings-item.success .settings-button {
+    background: rgba(var(--accent-rgb), 0.2);
+    color: var(--accent);
+}
+
+/* Success State for Clear Watch History */
+.settings-item.success-state {
+    background: rgba(var(--success-rgb), 0.2) !important;
+}
+
+.settings-item.success-state .settings-button,
+.settings-item.success-state .settings-button-danger {
+    background: rgba(var(--success-rgb), 0.2) !important;
+    border-color: var(--success) !important;
+    color: var(--text-primary) !important;
+}
+
+.settings-item.success-state .settings-button-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+}
+
+/* Arrow Control Styles for Subtitle Settings */
+.settings-item-arrows {
+    cursor: pointer;
+}
+
+.settings-arrows-control {
+    display: flex;
+    align-items: center;
+    gap: 0.74vh; /* 8px */
+}
+
+.settings-arrow-value {
+    font-family: 'Degular Mono', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 24px;
+    color: var(--text-primary);
+    min-width: 120px;
+    text-align: center;
+    transition: color 0.15s ease;
+}
+
+.settings-item.focused .settings-arrow-value {
+    color: var(--accent);
+}
+
+.settings-arrow-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3); /* Subtle stroke by default */
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.settings-arrow-btn img {
+    width: 16px;
+    height: 16px;
+}
+
+.settings-item.focused .settings-arrow-btn {
+    background-color: rgba(var(--accent-rgb), 0.2); /* 20% accent fill */
+    border-color: var(--accent); /* Accent stroke */
+}
+
+.settings-item.focused .settings-arrow-btn img {
+    filter: none; /* Keep white icon */
+}
+
+.settings-arrow-btn.arrow-flash {
+    background-color: rgba(var(--accent-rgb), 0.5);
+    border-color: var(--accent);
+}

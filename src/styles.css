@@ -1,0 +1,3699 @@
+/* Fonts */
+@font-face {
+    font-family: 'Degular';
+    src: url('assets/fonts/DegularVar-TextThin.ttf') format('truetype-variations');
+    font-weight: 1 999;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Degular Mono';
+    src: url('assets/fonts/DegularMonoVar-Thin.ttf') format('truetype-variations');
+    font-weight: 1 999;
+    font-style: normal;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Grid System - Based on 1920x1080 */
+    --column-width: 6.04vw; /* 116px / 1920px */
+    --gutter: 1.25vw; /* 24px / 1920px */
+    --offset: 1.25vw; /* 24px / 1920px */
+    
+    /* Top Bar */
+    --topbar-height: 11.11vh; /* 120px / 1080px */
+    
+    /* Nav Widths */
+    --nav-compact-width: calc(var(--column-width) + var(--offset)); /* 1 column */
+    --nav-expanded-width: calc((var(--column-width) * 2) + var(--gutter) + var(--offset)); /* 2 columns */
+    
+    /* Colors */
+    --bg-primary: #1A1A1A;
+    --bg-secondary: #242424;
+    --accent: #39ddd8;
+    --accent-rgb: 57, 221, 216; /* RGB values of accent color for rgba() */
+    --text-primary: #fff;
+    --text-secondary: #888;
+    --text-tertiary: #e1e5e5;
+    
+    /* Status colors */
+    --success: #a7f259;
+    --success-rgb: 167, 242, 89;
+    --error: #fc5f5f;
+    --error-rgb: 252, 95, 95;
+    
+    /* Detail page colors */
+    --detail-text-primary: #ffffff;
+    --detail-text-info: #cccccc;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #191a1a;
+    color: var(--text-primary);
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    cursor: none;
+}
+
+/* Cursor visible state - applied via JS on mouse movement */
+body.cursor-visible {
+    cursor: default;
+}
+
+body.cursor-visible * {
+    cursor: inherit;
+}
+
+#app {
+    width: 100vw;
+    height: 100vh;
+    display: grid;
+    grid-template-rows: var(--topbar-height) 1fr;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+        "topbar topbar"
+        "nav content";
+}
+
+/* Top Bar */
+.top-bar {
+    grid-area: topbar;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 var(--offset);
+    background-color: transparent;
+    height: var(--topbar-height);
+    position: relative;
+    z-index: 100;
+}
+
+.top-bar-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-image {
+    width: 6.04vw; /* 116px / 1920px */
+    height: 3.89vh; /* 42px / 1080px */
+}
+
+/* Color the accent part of the logo */
+.logo-image .logo-accent {
+    fill: var(--accent);
+}
+
+.top-bar-time {
+    font-family: 'Degular Mono', monospace;
+    font-size: 2.22vh; /* 24px / 1080px */
+    font-variation-settings: 'wght' 600; /* Semibold */
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    margin-right: 1.25vw; /* 24px - match logo left margin */
+    display: flex;
+    align-items: center;
+}
+
+/* Side Navigation */
+.side-nav {
+    grid-area: nav;
+    background-color: transparent;
+    width: var(--nav-compact-width);
+    transition: width 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    position: relative;
+    z-index: 100;
+}
+
+.side-nav.expanded {
+    width: var(--nav-expanded-width);
+}
+
+.nav-items-top {
+    display: flex;
+    flex-direction: column;
+    padding-top: 0; /* No top padding - align with grid */
+    gap: 2.22vh; /* 24px gap between buttons */
+}
+
+.nav-items-bottom {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 3vh;
+    gap: 2.22vh; /* 24px gap between buttons */
+}
+
+/* Nav Item - Button with padding */
+.nav-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Left align content */
+    height: 6.67vh; /* 72px - explicit height */
+    padding: 2.22vh; /* 24px padding on all sides */
+    margin-left: 2.08vw; /* 40px from left edge */
+    cursor: pointer;
+    background-color: transparent; /* Remove red test background */
+    border: 3px solid transparent;
+    border-radius: 1.11vh; /* 12px */
+    box-sizing: border-box;
+    transition: all 0.2s;
+    gap: 1.11vh; /* 12px gap between icon and text when expanded */
+}
+
+/* Icon */
+.nav-item .nav-icon {
+    width: 2.22vh; /* 24px */
+    height: 2.22vh; /* 24px */
+    flex-shrink: 0;
+}
+
+/* Label - hidden in collapsed, visible in expanded */
+.nav-label {
+    font-family: 'Degular', sans-serif;
+    font-size: 3.15vh; /* 34px */
+    font-variation-settings: 'wght' 400;
+    color: var(--text-primary);
+    opacity: 0; /* Hidden in collapsed */
+    transition: opacity 0.3s ease;
+    white-space: nowrap; /* Prevent text wrapping */
+}
+
+/* Expanded state - reveal label */
+.side-nav.expanded .nav-label {
+    opacity: 1;
+}
+
+/* Hover state */
+.nav-item:hover,
+.nav-item.focused {
+    border: 3px solid var(--accent);
+    background-color: rgba(var(--accent-rgb), 0.2);
+}
+
+.nav-item:hover .nav-label,
+.nav-item.focused .nav-label {
+    font-variation-settings: 'wght' 600; /* Semibold */
+}
+
+/* Active state */
+.nav-item-active .nav-icon-path {
+    fill: var(--accent); /* Use accent color variable */
+}
+
+.nav-item-active .nav-label {
+    font-variation-settings: 'wght' 600;
+}
+
+/* Content Area */
+.content-area {
+    grid-area: content;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: #191a1a;
+    transition: margin-left 0.3s ease;
+    scroll-padding-top: 2.5vh; /* Prevents scroll from stopping where cards would be cut off */
+}
+
+/* Hide scrollbar */
+.content-area::-webkit-scrollbar {
+    display: none;
+}
+
+.content-area {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+/* When nav expands, shift content right by just 24px (not a full column) */
+.side-nav.expanded ~ .content-area {
+    margin-left: var(--gutter); /* Just 24px to maintain consistent gutter */
+}
+
+.content-header {
+    display: flex;
+    gap: 2vw;
+    padding: 2vh var(--offset);
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.content-header {
+    display: flex;
+    gap: 2vw;
+    padding: 2vh var(--offset);
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.search-input {
+    padding: 1.5vh 2vw;
+    background-color: #333;
+    border: 2px solid #444;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1.8vh;
+    width: 20vw;
+    transition: border-color 0.3s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    font-size: 3vh;
+    cursor: pointer;
+    padding: 1vh;
+    transition: transform 0.2s;
+    color: var(--text-primary);
+}
+
+.icon-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Loading */
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #333;
+    border-top-color: #00BCD4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Content Wrapper */
+.content-wrapper {
+    display: flex;
+    gap: 0;
+    min-height: calc(100vh - var(--topbar-height) - 10vh);
+    position: relative;
+    justify-content: space-between;
+}
+
+/* Movie Grid */
+.movie-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(6, 13.33vw); /* 256px / 1920px = 13.33vw per poster */
+    gap: var(--gutter);
+    padding: 1.5vh 0 2vh 0; /* Increased top padding to prevent cutoff on scale */
+    padding-left: var(--offset); /* 24px left padding */
+    padding-right: calc(var(--offset) / 2);
+}
+
+/* Adjust left padding when nav expands to maintain 24px gutter */
+.side-nav.expanded ~ .content-area .movie-grid {
+    padding-left: 0; /* Remove left padding since margin-left shift already includes it */
+}
+
+/* Alphabet Navigation */
+.alphabet-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0; /* No gaps between letters */
+    background: transparent;
+    padding: 0 2.5vw 0 16px; /* More left padding to prevent cutoff */
+    min-width: 80px; /* Even wider */
+    max-width: 80px;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-y: auto;
+    overflow-x: visible;
+    position: sticky;
+    top: 0;
+    height: calc(100vh - var(--topbar-height));
+    align-self: flex-start;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+/* Hide scrollbar for Chrome/Safari/Opera */
+.alphabet-nav::-webkit-scrollbar {
+    display: none;
+}
+
+/* Alphabet Items */
+.alphabet-item {
+    width: 36px; /* Wider to prevent letter cutoff */
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Degular Mono', monospace;
+    font-size: 1.85vh; /* 20px / 1080px */
+    font-variation-settings: 'wght' 400; /* Regular */
+    color: #969999;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    user-select: none;
+}
+
+.alphabet-item:hover {
+    color: #fff;
+    background: rgba(var(--accent-rgb), 0.2);
+    border: 1px solid var(--accent);
+}
+
+.alphabet-item.focused {
+    color: #fff;
+    background: rgba(var(--accent-rgb), 0.2);
+    border: 1px solid var(--accent);
+}
+
+.alphabet-item.active {
+    color: var(--accent); /* Cyan */
+}
+
+.alphabet-item.unavailable {
+    color: #444;
+    cursor: default;
+}
+
+.alphabet-item.unavailable:hover {
+    color: #444;
+    background: transparent;
+}
+
+/* Movie Card */
+.movie-card {
+    position: relative;
+    cursor: pointer;
+    background-color: transparent;
+    display: flex;
+    flex-direction: column;
+    scroll-margin-top: -6vh; /* Offset focus position up from center */
+}
+
+/* Poster container */
+.movie-card-poster-container {
+    position: relative; /* For progress bar and watched badge positioning */
+    width: 100%;
+    aspect-ratio: 2/3;
+    transition: transform 0.3s;
+}
+
+.movie-card:hover .movie-card-poster-container {
+    transform: scale(1.045);
+}
+
+/* Outer stroke wrapper - cyan accent */
+.movie-card-poster-outer-stroke {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    padding: 5px; /* Always 5px padding */
+    box-sizing: border-box;
+    background-color: transparent;
+    transition: background-color 0.3s;
+}
+
+.movie-card.focused .movie-card-poster-outer-stroke {
+    background-color: var(--accent); /* Show cyan on focus */
+}
+
+/* Inner stroke wrapper - dark background */
+.movie-card-poster-inner-stroke {
+    width: 100%;
+    height: 100%;
+    border-radius: 7px;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 2px; /* Always 2px padding */
+    background-color: transparent;
+    transition: background-color 0.3s;
+}
+
+.movie-card.focused .movie-card-poster-inner-stroke {
+    background-color: #191a1a; /* Show dark on focus */
+}
+
+/* Keyboard Focus */
+.movie-card.focused {
+    z-index: 10;
+}
+
+.movie-card.focused .movie-card-poster-container {
+    transform: scale(1.045);
+}
+
+.movie-card-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 5px; /* Small radius to fit inside strokes */
+}
+
+.movie-card-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.11vh; /* 12px / 1080px */
+    padding-top: 1.48vh; /* 16px gap from poster */
+}
+
+.movie-card-title {
+    font-family: 'Degular', sans-serif;
+    font-size: 2.22vh; /* 24px / 1080px */
+    font-variation-settings: 'wght' 400; /* Regular */
+    color: var(--text-primary);
+    text-align: center;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.85vh; /* 20px / 1080px */
+}
+
+.movie-card-year {
+    font-family: 'Degular Mono', monospace;
+    font-size: 1.57vh; /* 17px / 1080px */
+    font-variation-settings: 'wght' 400; /* Regular */
+    color: var(--text-tertiary);
+    text-align: center;
+    line-height: 1.02vh; /* 11px / 1080px */
+}
+
+.movie-card-meta {
+    display: none; /* Hide runtime and rating */
+}
+
+.rating {
+    display: none;
+}
+
+.runtime {
+    display: none;
+}
+
+/* Badges */
+/* Watched Badge - General (for grid cards) */
+.watched-badge {
+    position: absolute;
+    top: 1.11vh; /* 12px from top (6px padding + 6px offset) */
+    right: 1.11vh; /* 12px from right (6px padding + 6px offset) */
+    width: 4.44vh; /* 48px - half of detail's 96px */
+    height: 4.44vh; /* 48px - half of detail's 96px */
+    background-color: #191a1a; /* App background color */
+    border-radius: 0.56vh; /* 6px - matches grid poster curve proportionally */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.watched-badge svg {
+    width: 2.22vh; /* 24px - half of detail's 48px */
+    height: 2.22vh; /* 24px - half of detail's 48px */
+}
+
+.watched-badge svg path {
+    fill: var(--accent); /* Apply accent color to SVG path */
+}
+
+/* Watched Badge - Detail Page Specific */
+.detail-poster-container .watched-badge {
+    top: 1.11vh; /* 12px padding from top */
+    right: 1.11vh; /* 12px padding from right */
+    width: 8.89vh; /* 96px */
+    height: 8.89vh; /* 96px */
+    border-radius: 1.11vh; /* 12px - matches detail poster curve */
+}
+
+.detail-poster-container .watched-badge svg {
+    width: 4.44vh; /* 48px icon size */
+    height: 4.44vh; /* 48px icon size */
+}
+
+/* Progress Bar */
+/* Progress Bar - General (for grid cards) */
+.progress-bar {
+    position: absolute;
+    bottom: 2.22vh; /* 24px - half of detail's 48px */
+    left: 2.22vh; /* 24px - half of detail's 48px */
+    right: 2.22vh; /* 24px - half of detail's 48px */
+    height: 1.67vh; /* 18px total (12px + 3px top + 3px bottom) - half of detail's 36px */
+    padding: 0.28vh; /* 3px padding all around - half of detail's 6px */
+    background-color: #191a1a; /* App background color */
+    border-radius: 0.37vh; /* 4px - half of detail's 8px */
+    box-sizing: border-box;
+}
+
+.progress-bar-fill {
+    height: 1.11vh; /* 12px - half of detail's 24px */
+    background-color: var(--accent);
+    border-radius: 0.19vh; /* 2px - half of detail's 4px */
+    transition: width 0.3s;
+}
+
+/* Progress Bar - Detail Page Specific */
+.detail-poster-container .progress-bar {
+    bottom: 4.44vh; /* 48px */
+    left: 4.44vh; /* 48px */
+    right: 4.44vh; /* 48px */
+    height: 3.33vh; /* 36px total (24px + 6px top + 6px bottom) */
+    padding: 0.56vh; /* 6px padding all around */
+    background-color: #191a1a; /* App background color */
+    border-radius: 0.74vh; /* 8px */
+    box-sizing: border-box;
+    border: none; /* Remove border, use padding instead */
+}
+
+.detail-poster-container .progress-bar-fill {
+    height: 2.22vh; /* 24px - actual fill height */
+    border-radius: 0.37vh; /* 4px - matches the curve nicely */
+}
+
+/* ==================== TV SHOW CARDS ==================== */
+/* TV show cards use the same structure and styles as movie cards */
+.tv-show-card {
+    position: relative;
+    cursor: pointer;
+    background-color: transparent;
+    display: flex;
+    flex-direction: column;
+    scroll-margin-top: -6vh;
+}
+
+.tv-show-card-poster-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2/3;
+    transition: transform 0.3s;
+}
+
+.tv-show-card:hover .tv-show-card-poster-container {
+    transform: scale(1.045);
+}
+
+.tv-show-card-poster-outer-stroke {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    padding: 5px;
+    box-sizing: border-box;
+    background-color: transparent;
+    transition: background-color 0.3s;
+}
+
+.tv-show-card.focused .tv-show-card-poster-outer-stroke {
+    background-color: var(--accent);
+}
+
+.tv-show-card-poster-inner-stroke {
+    width: 100%;
+    height: 100%;
+    border-radius: 7px;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 2px;
+    background-color: transparent;
+    transition: background-color 0.3s;
+}
+
+.tv-show-card.focused .tv-show-card-poster-inner-stroke {
+    background-color: #191a1a;
+}
+
+.tv-show-card.focused {
+    z-index: 10;
+}
+
+.tv-show-card.focused .tv-show-card-poster-container {
+    transform: scale(1.045);
+}
+
+.tv-show-card-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 5px;
+}
+
+.tv-show-card-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.11vh;
+    padding-top: 1.48vh;
+}
+
+.tv-show-card-title {
+    font-family: 'Degular', sans-serif;
+    font-size: 2.22vh;
+    font-variation-settings: 'wght' 400;
+    color: var(--text-primary);
+    text-align: center;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.85vh;
+}
+
+.tv-show-card-year {
+    font-family: 'Degular Mono', monospace;
+    font-size: 1.57vh;
+    font-variation-settings: 'wght' 400;
+    color: var(--text-tertiary);
+    text-align: center;
+    line-height: 1.02vh;
+}
+
+.tv-show-card-meta {
+    display: flex;
+    gap: 1.48vh;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Degular Mono', monospace;
+    font-size: 1.57vh;
+    font-variation-settings: 'wght' 400;
+    color: var(--text-tertiary);
+}
+
+.tv-show-card-meta .rating {
+    display: inline;
+    color: var(--accent);
+}
+
+.tv-show-card-meta .season-count {
+    display: inline;
+}
+
+/* Unwatched Count Badge - For TV Shows */
+.unwatched-count-badge {
+    position: absolute;
+    top: 1.11vh; /* 12px from top - same as watched badge */
+    right: 1.11vh; /* 12px from right - same as watched badge */
+    width: 4.44vh; /* 48px - same as watched badge */
+    height: 4.44vh; /* 48px - same as watched badge */
+    background-color: #191a1a; /* App background color */
+    border-radius: 0.56vh; /* 6px - same as watched badge */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Degular Mono', monospace;
+    font-size: 2.22vh; /* 24px */
+    font-variation-settings: 'wght' 400; /* Regular */
+    color: white;
+}
+
+
+/* ==================== END TV SHOW CARDS ==================== */
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+.modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: #242424;
+    border-radius: 12px;
+    max-width: 1200px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    padding: 40px;
+}
+
+.modal-small {
+    max-width: 600px;
+}
+
+.modal-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 32px;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+}
+
+.modal-close:hover {
+    background-color: #00BCD4;
+}
+
+/* Settings Form */
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2.22vh; /* 24px at 1080p */
+}
+
+.settings-form label {
+    font-family: 'Degular Variable', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px at 1080p */
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 0.74vh; /* 8px */
+}
+
+.settings-form input[type="text"] {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.74vh; /* 8px */
+    padding: 1.11vh 1.48vh; /* 12px 16px */
+    font-family: 'Degular Mono', sans-serif;
+    font-size: 2vh; /* ~22px */
+    color: var(--text-primary);
+}
+
+.settings-form input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.settings-section {
+    margin-top: 1.11vh; /* 12px */
+}
+
+.settings-section-header {
+    font-family: 'Degular Variable', sans-serif;
+    font-variation-settings: 'wght' 600, 'wdth' 125;
+    font-size: 2.59vh; /* 28px at 1080p */
+    color: var(--text-primary);
+    margin-bottom: 1.11vh; /* 12px */
+    padding-bottom: 0.74vh; /* 8px */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.11vh; /* 12px */
+    border-radius: 0.74vh; /* 8px */
+    background-color: rgba(255, 255, 255, 0.2);
+    margin-bottom: 0.37vh; /* 4px gap between rows */
+}
+
+.settings-row.focused {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.settings-label {
+    font-family: 'Degular Variable', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-primary);
+}
+
+.settings-control {
+    display: flex;
+    align-items: center;
+    gap: 0.74vh; /* 8px */
+}
+
+.settings-value {
+    font-family: 'Degular Mono', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-primary);
+    min-width: 9.26vh; /* ~100px */
+    text-align: center;
+}
+
+.settings-row.focused .settings-value {
+    color: var(--accent);
+}
+
+.settings-arrow {
+    width: 2.96vh; /* 32px */
+    height: 2.96vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 0.37vh; /* 4px */
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.settings-arrow img {
+    width: 1.48vh; /* 16px */
+    height: 1.48vh;
+}
+
+.settings-row.focused .settings-arrow {
+    border-color: var(--accent);
+    background-color: rgba(var(--accent-rgb), 0.2);
+}
+
+.settings-arrow.arrow-flash {
+    background-color: rgba(var(--accent-rgb), 0.5);
+    border-color: var(--accent);
+}
+
+/* Detail Page */
+.detail-page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #191a1a;
+    z-index: 50;
+}
+
+.detail-page-content {
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Changed from overflow-y: auto - detail page shouldn't scroll */
+    position: relative;
+}
+
+/* Fanart Background */
+.detail-fanart {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: saturate(0.7); /* 30% desaturated - change value to adjust (0 = grayscale, 1 = normal, 1.5 = oversaturated) */
+    z-index: 1;
+}
+
+.detail-fanart-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 2;
+}
+
+.detail-fanart-gradient-left {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 484px;
+    height: 100%;
+    background: linear-gradient(to right, #000000, rgba(0, 0, 0, 0));
+    z-index: 2; /* Below content (which is z-index: 10) */
+    pointer-events: none;
+}
+
+.detail-fanart-gradient-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 37.04vh; /* 400px */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0));
+    z-index: 2; /* Below content */
+    pointer-events: none;
+}
+
+.detail-fanart-gradient-bottom-accent {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh; /* Full window height */
+    z-index: 3; /* Above bottom gradient, below content */
+    pointer-events: none;
+    /* background set inline with accent color */
+}
+
+/* Detail Content Container */
+.detail-content {
+    display: flex;
+    align-items: flex-start;
+    padding-top: var(--topbar-height);
+    position: relative;
+    z-index: 5;
+    padding-left: calc(var(--nav-compact-width) + 2.22vh); /* Nav width + 24px */
+    padding-right: 4.44vh; /* 48px */
+    gap: 4.44vh; /* 48px between poster and viewport */
+    transition: padding-left 0.3s ease;
+}
+
+/* When nav is expanded, shift content right */
+.side-nav.expanded ~ #detailPage .detail-content {
+    padding-left: calc(var(--nav-expanded-width) + 2.22vh); /* Expanded nav width + 24px */
+}
+
+/* Viewport - hides overflow */
+.detail-content-viewport {
+    flex: 1; /* Take up remaining space to right edge */
+    height: 77.78vh; /* 840px - same as poster height */
+    overflow-y: hidden; /* Hide vertical overflow */
+    overflow-x: hidden; /* Hide horizontal overflow and scrollbar */
+    position: relative !important; /* Force this to be the positioning context */
+    /* Soft blur effect at top and bottom edges using mask - DISABLED FOR TESTING */
+    /* -webkit-mask-image: linear-gradient(to bottom, 
+        transparent 0%, 
+        black 2.22vh,
+        black calc(100% - 4.44vh),
+        transparent 100%
+    );
+    mask-image: linear-gradient(to bottom, 
+        transparent 0%, 
+        black 2.22vh,
+        black calc(100% - 4.44vh),
+        transparent 100%
+    ); */
+}
+
+/* Track - slides vertically using absolute positioning */
+.detail-content-track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0; /* Fill viewport width */
+    /* Height varies based on number of containers - will be set dynamically or use max */
+    min-height: calc(77.78vh * 4 + 17.78vh * 3); /* Up to 4 containers + 3 gaps */
+    margin: 0;
+    padding: 0;
+    transform: translateY(0); /* Explicit initial transform */
+    transition: transform 0.6s cubic-bezier(0.87, 0, 0.13, 1); /* Circ - very aggressive snap */
+}
+
+.detail-content-track[data-view="main"] {
+    transform: translateY(0);
+}
+
+.detail-content-track[data-view="cast"] {
+    transform: translateY(-95.56vh); /* -(840px + 192px gap) = -1032px */
+}
+
+.detail-content-track[data-view="collection"] {
+    transform: translateY(-191.11vh); /* -(840px * 2 + 192px * 2) = -2064px */
+}
+
+.detail-content-track[data-view="recommendations"] {
+    transform: translateY(-286.67vh); /* -(840px * 3 + 192px * 3) = -3096px */
+}
+
+/* Each container in track */
+.detail-content-track > .detail-info-container {
+    width: 71.11vh; /* 768px at 1080p - for main and cast */
+    height: 77.78vh; /* 840px - same as poster height */
+    padding-top: 4.44vh; /* 48px top padding */
+    padding-bottom: 4.44vh; /* 48px bottom padding */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    position: relative; /* Ensure normal flow positioning */
+}
+
+/* Carousel containers (collection, tags, recommendations) should be wider */
+.detail-collection-container,
+.detail-tag-container,
+.detail-recommendations-container {
+    width: 100% !important; /* Full width of viewport */
+}
+
+/* All containers after the first should have gap margin */
+.detail-content-track > .detail-info-container:not(:first-child) {
+    margin-top: 17.78vh; /* 192px gap */
+}
+
+/* Main info container - push content to bottom */
+.detail-content-track > .detail-info-container:first-child {
+    justify-content: flex-end;
+}
+
+/* Cast info container - content starts at top, extends to right edge */
+.detail-content-track > .detail-info-container:nth-child(2) {
+    width: auto; /* Override - extend to viewport edge */
+    padding-bottom: 0; /* Remove bottom padding to give more space for content */
+    justify-content: flex-start;
+}
+
+/* Collection container (3rd) - content starts at top, extends to right edge */
+.detail-content-track > .detail-info-container:nth-child(3) {
+    width: auto; /* Override - extend to viewport edge */
+    padding-top: 4.44vh; /* 48px top padding */
+    padding-bottom: 0; /* Remove bottom padding */
+    justify-content: flex-start;
+}
+
+/* Recommendations container (4th) - content starts at top, extends to right edge */
+.detail-content-track > .detail-info-container:nth-child(4) {
+    width: auto; /* Override - extend to viewport edge */
+    padding-top: 4.44vh; /* 48px top padding */
+    padding-bottom: 0; /* Remove bottom padding */
+    justify-content: flex-start;
+}
+
+/* Poster Container - 560px wide, 840px tall */
+.detail-poster-container {
+    position: relative; /* For progress bar and watched badge */
+    width: 51.85vh; /* 560px at 1080p */
+    height: 77.78vh; /* 840px at 1080p */
+    flex-shrink: 0;
+}
+
+.detail-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 1.11vh; /* 12px */
+    display: block;
+}
+
+/* Info Container - 768px wide, 840px tall, same height as poster */
+.detail-cast-info-container {
+    flex: 1; /* Take all remaining space */
+}
+
+/* Text Group - title, meta, tagline, synopsis with 24px gaps */
+.detail-text-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2.22vh; /* 24px */
+    margin-bottom: 4.44vh; /* 48px before file info */
+}
+
+/* Title */
+.detail-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 700;
+    font-size: 8.89vh; /* 96px */
+    line-height: 7.22vh; /* 78px */
+    color: var(--detail-text-primary);
+}
+
+/* Reduced title size (first attempt to fit content) */
+.title-reduced {
+    font-size: 7.5vh; /* 81px at 1080p */
+    line-height: 6.3vh; /* 68px at 1080p */
+}
+
+/* Meta Row */
+.detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 2.22vh; /* 24px */
+    font-family: 'Degular Mono', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--detail-text-primary);
+}
+
+.detail-meta-divider {
+    width: 1px;
+    height: 2.22vh; /* 24px */
+    background-color: var(--accent);
+}
+
+/* Tagline */
+.detail-tagline {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 4.44vh; /* 48px */
+    line-height: 100%;
+    color: var(--detail-text-primary);
+}
+
+/* Synopsis */
+.detail-synopsis {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    line-height: 1.5;
+    color: var(--detail-text-info);
+}
+
+/* Synopsis line clamping */
+.synopsis-clamp-4 {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.synopsis-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Title line clamping */
+.title-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.title-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.title-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Tagline line clamping */
+.tagline-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* File Info Badges */
+.detail-file-info {
+    display: flex;
+    gap: 2.22vh; /* 24px */
+    margin-bottom: 4.44vh; /* 48px before actions */
+}
+
+.detail-badge {
+    display: flex;
+    align-items: center;
+    gap: 1.11vh; /* 12px */
+    height: 4.44vh; /* 48px */
+    padding: 0 1.11vh; /* 12px */
+    background-color: #000000;
+    border-radius: 0.74vh; /* 8px */
+}
+
+.detail-badge-icon {
+    width: 2.22vh; /* 24px */
+    height: 2.22vh;
+}
+
+.detail-badge-text {
+    font-family: 'Degular Mono', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--detail-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 12vh; /* Prevent wrapping */
+}
+
+/* Action Buttons */
+.detail-actions {
+    display: flex;
+    gap: 2.22vh; /* 24px */
+}
+
+.detail-button {
+    display: flex;
+    align-items: center;
+    gap: 1.11vh; /* 12px - consistent gap */
+    height: 6.67vh; /* 72px */
+    width: 6.67vh; /* 72px - square by default */
+    padding: 0 0 0 2.22vh; /* Left padding to position icon */
+    background-color: transparent;
+    border: 1px solid var(--detail-text-primary);
+    border-radius: 0.74vh; /* 8px */
+    cursor: pointer;
+    transition: width 0.6s ease, background-color 0.6s ease; /* 600ms animation */
+    overflow: hidden;
+    justify-content: flex-start; /* Always flex-start, icon stays put */
+}
+
+.detail-button-icon {
+    width: 2.22vh; /* 24px */
+    height: 2.22vh;
+    flex-shrink: 0;
+}
+
+.detail-button-text {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.59vh; /* 28px */
+    color: var(--detail-text-primary);
+    white-space: nowrap;
+    transition: width 0.6s ease, opacity 0.6s ease; /* 600ms animation */
+    width: 0;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.detail-button:hover,
+.detail-button.focused {
+    background-color: rgba(var(--accent-rgb), 0.2);
+    border: 3px solid var(--accent);
+    width: auto;
+    padding: 0 2.22vh 0 2.22vh; /* Equal padding on both sides when expanded */
+    gap: 1.11vh; /* Same gap */
+    justify-content: flex-start; /* Same as default */
+}
+
+.detail-button:hover .detail-button-text,
+.detail-button.focused .detail-button-text {
+    font-variation-settings: 'wght' 700;
+    width: auto;
+    opacity: 1;
+}
+
+/* ========================================
+   Player Page
+   ======================================== */
+
+.player-page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #000000;
+    z-index: 100; /* Above everything */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.player-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+/* MPV will render video here */
+#mpv-canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* ========================================
+   Detail Page - Cast & Crew Section
+   ======================================== */
+
+/* Detail Page Sections (OLD - UNUSED - kept for reference) */
+.detail-section-old-unused {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+.detail-section-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 3.15vh; /* 34px */
+    line-height: 2.59vh; /* 28px */
+    color: var(--text-primary);
+    margin: 0 0 2.22vh 0; /* 24px bottom margin */
+}
+
+/* Cast Cards - Horizontal Scrollable */
+.detail-cast-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-bottom: 4.44vh; /* 48px */
+    /* scroll-snap-type: x mandatory; */ /* Disabled - we control scroll position manually */
+    scroll-behavior: smooth;
+    /* Hide scrollbar */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.detail-cast-scroll-container::-webkit-scrollbar {
+    display: none;
+}
+
+.detail-cast-grid {
+    display: flex;
+    gap: 2.22vh; /* 24px */
+    padding-bottom: 1.11vh; /* 12px for breathing room */
+}
+
+/* Add scrollable space after last card */
+.detail-cast-grid::after {
+    content: '';
+    flex-shrink: 0;
+    width: 75%; /* Space to allow last card to reach focus position */
+}
+
+.cast-card {
+    flex-shrink: 0;
+    width: 23.70vh; /* 256px */
+    cursor: pointer;
+    /* scroll-snap-align: start; */ /* Disabled - we control scroll position manually */
+}
+
+.cast-card-image-container {
+    width: 100%;
+    aspect-ratio: 2/3;
+    position: relative;
+    transition: transform 0.3s;
+}
+
+.cast-card-outer-stroke {
+    position: absolute;
+    inset: 0;
+    border-radius: 1.11vh; /* 12px */
+    padding: 0.46vh; /* 5px outer stroke */
+    background-color: transparent;
+    transition: background-color 0.3s;
+    pointer-events: none;
+}
+
+.cast-card.focused .cast-card-outer-stroke {
+    background-color: var(--accent); /* Cyan accent on focus */
+}
+
+.cast-card-inner-stroke {
+    position: absolute;
+    inset: 0.46vh; /* 5px offset */
+    border-radius: 0.65vh; /* 7px */
+    padding: 0.19vh; /* 2px inner stroke */
+    background-color: transparent;
+    transition: background-color 0.3s;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.cast-card.focused .cast-card-inner-stroke {
+    background-color: #191a1a; /* Dark inner stroke on focus */
+}
+
+.cast-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* No scaling, just crop */
+    object-position: center top;
+    display: block;
+}
+
+.cast-card-placeholder {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.cast-card-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0; /* No gap */
+    padding-top: 0.74vh; /* 8px */
+}
+
+.cast-card-name {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-primary);
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap; /* Don't wrap */
+}
+
+.cast-card-role {
+    font-family: 'Degular Mono', monospace;
+    font-variation-settings: 'wght' 400;
+    font-size: 1.85vh; /* 20px */
+    color: var(--text-secondary);
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap; /* Don't wrap */
+}
+
+/* ========================================
+   Season Cards - Horizontal Scrollable
+   ======================================== */
+
+.detail-season-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-bottom: 4.44vh; /* 48px */
+    scroll-behavior: smooth;
+    /* Hide scrollbar */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.detail-season-scroll-container::-webkit-scrollbar {
+    display: none;
+}
+
+.detail-season-grid {
+    display: flex;
+    gap: 1.85vh; /* 20px */
+    padding-bottom: 1.85vh; /* 20px - space for focus ring */
+}
+
+/* Add scrollable space with ::after pseudo-element */
+.detail-season-grid::after {
+    content: '';
+    flex-shrink: 0;
+    width: 75%;
+}
+
+.season-card {
+    flex-shrink: 0;
+    width: 23.70vh; /* 256px - same as cast cards */
+    cursor: pointer;
+}
+
+.season-card-poster-container {
+    width: 100%;
+    aspect-ratio: 2/3;
+    position: relative;
+    transition: transform 0.3s;
+    border-radius: 1.11vh; /* 12px */
+    overflow: hidden;
+}
+
+.season-card-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Season label overlay at bottom */
+.season-card-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, transparent 100%);
+    padding: 3.70vh 1.85vh 1.85vh 1.85vh; /* 40px 20px 20px 20px - more padding top for gradient */
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 2.22vh; /* 24px */
+    color: white;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.season-card-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-primary);
+    text-align: center;
+    width: 100%;
+    padding-top: 1.48vh; /* 16px */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.season-card-episodes {
+    font-family: 'Degular Mono', monospace;
+    font-variation-settings: 'wght' 400;
+    font-size: 1.57vh; /* 17px */
+    color: var(--text-tertiary);
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* More Info Section */
+.detail-more-info {
+    margin-top: 1.11vh; /* 12px - decreased from 24px */
+}
+
+.detail-info-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.11vh; /* 12px */
+    margin-bottom: 0; /* Remove bottom margin */
+}
+
+.detail-info-label {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-primary);
+    flex-shrink: 0;
+    padding-top: 0.74vh; /* 8px - align with badge padding */
+}
+
+.detail-info-values {
+    display: flex;
+    flex-wrap: nowrap; /* Prevent wrapping - keep on one line */
+    gap: 0.74vh; /* 8px */
+    overflow: hidden; /* Hide overflow */
+}
+
+.detail-info-badge {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-primary);
+    background: transparent;
+    border: none; /* No border */
+    border-radius: 0.74vh; /* 8px */
+    padding: 0.74vh 1.11vh; /* 8px vertical, 12px horizontal */
+    display: inline-block;
+    flex-shrink: 1; /* Allow shrinking if needed */
+    white-space: nowrap; /* Prevent text wrapping inside badge */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0; /* Allow flexbox to shrink below content size */
+}
+
+/* ========================================
+   RECOMMENDATIONS & COLLECTION CAROUSELS
+   ======================================== */
+
+.detail-collection-container,
+.detail-tag-container,
+.detail-recommendations-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Vertically center the content */
+}
+
+.detail-section {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Add spacing between collection and recommendations sections */
+.detail-section + .detail-section {
+    margin-top: 0; /* No gap - removed to fit both rows */
+}
+
+/* Scroll containers for carousels */
+.detail-collection-scroll-container,
+.detail-tag-scroll-container,
+.detail-recommendations-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+.detail-collection-scroll-container::-webkit-scrollbar,
+.detail-tag-scroll-container::-webkit-scrollbar,
+.detail-recommendations-scroll-container::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+/* Grid layouts */
+.detail-collection-grid,
+.detail-tag-grid,
+.detail-recommendations-grid {
+    display: flex;
+    gap: 2.22vh; /* 24px */
+    padding-bottom: 1.11vh; /* 12px for breathing room */
+}
+
+/* Add scrollable space after last card using ::after pseudo-element */
+.detail-collection-grid::after,
+.detail-tag-grid::after,
+.detail-recommendations-grid::after {
+    content: '';
+    flex-shrink: 0;
+    width: 75%; /* Space to allow last card to reach focus position */
+}
+
+/* Recommendation cards - using same stroke system as cast cards */
+.recommendation-card {
+    flex-shrink: 0;
+    width: 31.11vh; /* 336px */
+    cursor: pointer;
+    scroll-snap-align: start;
+}
+
+.recommendation-card-image-container {
+    width: 100%;
+    aspect-ratio: 2/3; /* Standard poster ratio */
+    position: relative;
+}
+
+.recommendation-card-outer-stroke {
+    position: absolute;
+    inset: 0;
+    border-radius: 1.11vh; /* 12px */
+    padding: 0.46vh; /* 5px outer stroke */
+    background-color: transparent;
+    transition: background-color 0.3s;
+    pointer-events: none;
+}
+
+.recommendation-card.focused .recommendation-card-outer-stroke {
+    background-color: var(--accent); /* Cyan accent on focus */
+}
+
+.recommendation-card-inner-stroke {
+    position: absolute;
+    inset: 0.46vh; /* 5px offset */
+    border-radius: 0.65vh; /* 7px */
+    padding: 0.19vh; /* 2px inner stroke */
+    background-color: transparent;
+    transition: background-color 0.3s;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.recommendation-card.focused .recommendation-card-inner-stroke {
+    background-color: #191a1a; /* Dark inner stroke on focus */
+}
+
+.recommendation-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+}
+
+.recommendation-card-placeholder {
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 0.74vh; /* 8px */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 1.67vh; /* 18px */
+}
+/* Card info */
+.recommendation-card-info {
+    margin-top: 1.11vh; /* 12px */
+    text-align: center;
+}
+
+.recommendation-card-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 2.96vh; /* 32px */
+    line-height: 2.78vh; /* 30px */
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recommendation-card-year {
+    font-family: 'Degular Mono', monospace;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-secondary);
+    margin-top: 0.37vh; /* 4px */
+}
+
+
+/* ========================================
+
+/* ========================================
+   TV Show Seasons - Minimal styling
+   ======================================== */
+
+.tv-seasons-container {
+    width: 100% !important; /* Full viewport width like recommendations */
+}
+
+.tv-seasons-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.tv-seasons-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.tv-seasons-grid {
+    display: flex;
+    gap: 1.85vh; /* 20px */
+    padding-bottom: 1.85vh;
+}
+
+.tv-season-card {
+    flex-shrink: 0;
+    width: 23.70vh; /* 256px - same as cast cards */
+    cursor: pointer;
+}
+
+.tv-season-poster-container {
+    width: 100%;
+    aspect-ratio: 2/3;
+    position: relative;
+    border-radius: 1.11vh; /* 12px */
+    overflow: hidden;
+    margin-bottom: 1.48vh; /* 16px */
+}
+
+.tv-season-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.tv-season-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 3.70vh 1.85vh 1.85vh 1.85vh; /* 40px 20px 20px 20px */
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 50%, transparent 100%);
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 700;
+    font-size: 2.22vh; /* 24px */
+    color: white;
+    text-align: center;
+    letter-spacing: 0.1em;
+}
+
+.tv-season-badge {
+    position: absolute;
+    top: 1.11vh; /* 12px */
+    right: 1.11vh;
+    width: 4.44vh; /* 48px */
+    height: 4.44vh;
+    border-radius: 0.56vh; /* 6px */
+    background-color: #191a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Degular Mono', monospace;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+}
+
+.tv-season-badge-watched {
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tv-season-badge-watched img {
+    width: 2.22vh; /* 24px */
+    height: 2.22vh;
+}
+
+.tv-season-badge-watched svg {
+    width: 2.22vh;
+    height: 2.22vh;
+}
+
+.tv-season-badge-watched svg path {
+    fill: var(--accent);
+}
+
+.tv-season-badge-count {
+    color: white;
+}
+
+.tv-season-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-primary);
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tv-season-count {
+    font-family: 'Degular Mono', monospace;
+    font-variation-settings: 'wght' 400;
+    font-size: 1.57vh; /* 17px */
+    color: var(--text-tertiary);
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ========================================
+   TV Show Detail - Using Grid Positioning
+   ======================================== */
+
+.tv-detail-wrapper {
+    position: relative;
+    z-index: 10; /* Above fanart gradient */
+    /* Position with same left margin as movie detail containers */
+    margin-left: calc(var(--column-width) + (var(--gutter) * 2));
+    /* Align top with bottom of topbar (120px) */
+    padding-top: 11.11vh; /* 120px - topbar height */
+    padding-bottom: 6.67vh; /* 72px from bottom */
+    /* Full viewport height minus topbar */
+    height: calc(100vh - 11.11vh);
+    /* Flexbox to control layout */
+    display: flex;
+    flex-direction: column;
+    /* Transition for nav expansion */
+    transition: margin-left 0.3s ease;
+}
+
+/* Push TV detail when nav expands */
+.side-nav.expanded ~ #detailPage .tv-detail-wrapper {
+    margin-left: calc(var(--column-width) + (var(--gutter) * 2) + var(--nav-expanded-width) - var(--nav-compact-width));
+}
+
+/* Spacer container - calculated height to position actions correctly */
+.tv-content-spacer {
+    /* Calculate: viewport - topbar - top padding - actions height (~40vh) - bottom padding */
+    height: calc(100vh - 11.11vh - 11.11vh - 40vh - 6.67vh);
+    flex-shrink: 0;
+}
+
+/* Info group (title, meta, plot) */
+.tv-info-group {
+    margin-top: 0.74vh; /* 8px top */
+}
+
+/* Actions group (buttons and seasons) - stays at bottom */
+.tv-actions-group {
+    flex: 0 0 auto; /* Don't grow or shrink */
+}
+
+/* Title - 9 columns wide, Degular Bold 68px/56px */
+.tv-detail-wrapper .detail-title {
+    font-family: 'Degular Variable', sans-serif;
+    font-variation-settings: 'wght' 700, 'wdth' 125; /* Display Bold */
+    font-size: 6.30vh; /* 68px */
+    line-height: 5.93vh; /* 64px */
+    color: white;
+    width: calc((var(--column-width) * 9) + (var(--gutter) * 8));
+    margin: 0 0 2.22vh 0; /* 24px bottom */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Metadata - use existing detail-meta styling */
+.tv-detail-wrapper .detail-meta {
+    margin-bottom: 2.22vh; /* 24px gap to plot */
+}
+
+/* Plot - 5 columns wide, Degular Regular 24px, clamped to 4 lines */
+.tv-detail-wrapper .detail-plot {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400; /* Regular */
+    font-size: 2.22vh; /* 24px */
+    line-height: 3.33vh; /* 36px */
+    color: rgba(255, 255, 255, 0.9);
+    width: calc((var(--column-width) * 5) + (var(--gutter) * 4));
+    margin: 0;
+    /* Clamp to 4 lines */
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Seasons scroll container */
+.tv-seasons-scroll {
+    margin-top: 4.44vh; /* 48px - gap before seasons */
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth; /* Smooth scrolling animation */
+    /* No width constraint - extends naturally to edge */
+}
+
+.tv-seasons-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.tv-seasons-grid {
+    display: flex;
+    gap: 1.85vh; /* 20px */
+    /* No padding-bottom - controlled by wrapper */
+}
+
+/* Add scrollable space after last card */
+.tv-seasons-grid::after {
+    content: '';
+    flex-shrink: 0;
+    width: 85%; /* Space to allow last card to reach focus position */
+}
+
+/* Season cards */
+.tv-season-card {
+    flex-shrink: 0;
+    width: 23.70vh; /* 256px */
+    cursor: pointer;
+    /* No scaling or transitions - just like cast cards */
+}
+
+/* Stroke styling - matches cast cards */
+.tv-season-outer-stroke {
+    position: absolute;
+    inset: 0;
+    border-radius: 1.11vh; /* 12px */
+    padding: 0.37vh; /* 4px outer stroke */
+    background-color: transparent;
+    transition: background-color 0.3s;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.tv-season-card.focused .tv-season-outer-stroke {
+    background-color: var(--accent); /* Cyan accent on focus */
+}
+
+.tv-season-inner-stroke {
+    position: absolute;
+    inset: 0.46vh; /* 5px offset */
+    border-radius: 0.65vh; /* 7px */
+    padding: 0.19vh; /* 2px inner stroke */
+    background-color: transparent;
+    transition: background-color 0.3s;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.tv-season-card.focused .tv-season-inner-stroke {
+    background-color: #191a1a; /* Dark inner stroke on focus */
+}
+
+.tv-season-poster-container {
+    width: 100%;
+    aspect-ratio: 2/3;
+    position: relative;
+    border-radius: 1.11vh; /* 12px */
+    overflow: hidden;
+    margin-bottom: 1.48vh; /* 16px */
+}
+
+.tv-season-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* REMOVED: .tv-season-label */
+
+.tv-season-badge {
+    position: absolute;
+    top: 1.11vh;
+    right: 1.11vh;
+    width: 4.44vh;
+    height: 4.44vh;
+    border-radius: 0.56vh;
+    background-color: #191a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Degular Mono', monospace;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh;
+}
+
+.tv-season-badge-watched {
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tv-season-badge-watched img {
+    width: 2.22vh; /* 24px */
+    height: 2.22vh;
+}
+
+.tv-season-badge-count {
+    color: white;
+}
+
+.tv-season-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh;
+    color: var(--text-primary);
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tv-season-count {
+    font-family: 'Degular Mono', monospace;
+    font-variation-settings: 'wght' 400;
+    font-size: 1.57vh;
+    color: var(--text-tertiary);
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ===================================
+   SEASON DETAIL PAGE
+   =================================== */
+
+/* Season tabs in top-bar */
+.season-tabs-container {
+    position: absolute;
+    /* Absolute positioning relative to wrapper - just align to left edge */
+    left: 0;
+    z-index: 100;
+    /* Match topbar height and vertical alignment */
+    top: 0;
+    height: 11.11vh; /* 120px - full topbar height */
+    display: flex;
+    align-items: center; /* Vertically center with clock */
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth; /* Smooth scrolling for keyboard navigation */
+    /* Cut off before clock - account for wrapper's margin */
+    max-width: calc(100vw - 20.74vh - 10vw);
+}
+
+.season-tabs-container::-webkit-scrollbar {
+    display: none;
+}
+
+.side-nav.expanded ~ #detailPage .season-tabs-container {
+    /* Max width adjusts for expanded nav */
+    max-width: calc(100vw - 37.41vh - 10vw);
+}
+
+.season-tabs {
+    display: flex;
+    gap: 2.22vh; /* 24px */
+    /* Add padding-right so last tab can reach focus position */
+    padding-right: 75%;
+}
+
+.season-tab {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 500; /* Medium */
+    font-size: 2.22vh; /* 24px */
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 1.11vh 1.85vh 0.93vh 1.85vh; /* 12px 20px 10px 20px - extra bottom for underline */
+    border-radius: 0.74vh; /* 8px - for focus state */
+    border: 2px solid transparent;
+    border-bottom: 2px solid transparent; /* Separate bottom border for underline */
+    white-space: nowrap;
+    transition: color 0.2s, background-color 0.2s, border-color 0.2s, border-radius 0.2s;
+}
+
+.season-tab:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.season-tab.focused {
+    background-color: rgba(var(--accent-rgb), 0.2);
+    border: 2px solid var(--accent);
+    color: white;
+}
+
+.season-tab-active {
+    color: white;
+    border-bottom: 2px solid var(--accent); /* Same 2px weight as focus */
+    border-radius: 0; /* No border radius for straight line */
+}
+
+/* Active + focused state */
+.season-tab.season-tab-active.focused {
+    border-radius: 0.74vh; /* Keep rounded corners for focus outline */
+    border-bottom: 2px solid var(--accent); /* Maintain underline */
+}
+
+/* Season detail wrapper */
+.season-detail-wrapper {
+    position: relative;
+    z-index: 10;
+    margin-left: calc(var(--column-width) + (var(--gutter) * 2));
+    padding-top: 11.11vh; /* 120px */
+    padding-bottom: 6.67vh; /* 72px - constrains content from bottom */
+    height: 100vh; /* Full viewport height */
+    display: flex;
+    flex-direction: column;
+    transition: margin-left 0.3s ease;
+}
+
+.side-nav.expanded ~ #detailPage .season-detail-wrapper {
+    margin-left: calc(var(--column-width) + (var(--gutter) * 2) + var(--nav-expanded-width) - var(--nav-compact-width));
+}
+
+/* Content spacer - pushes episodes to bottom */
+.season-content-spacer {
+    /* Wrapper is 100vh with padding-top 11.11vh and padding-bottom 6.67vh
+       Available space: 100vh - 11.11vh - 6.67vh = 82.22vh
+       Episodes group: ~40vh
+       Spacer: 82.22vh - 40vh = 42.22vh */
+    height: 42.22vh;
+    flex-shrink: 0;
+}
+
+/* Info group */
+.season-info-group {
+    margin-top: 0.74vh; /* 8px top */
+}
+
+/* Show title - Degular Variable Display Bold */
+.season-show-title {
+    font-family: 'Degular Variable', sans-serif;
+    font-weight: 700; /* Bold */
+    font-stretch: 125%; /* Display width */
+    font-size: 6.30vh; /* 68px - same as TV detail */
+    line-height: 5.74vh; /* 62px - increased by 2px from 60px */
+    color: white;
+    width: calc((var(--column-width) * 9) + (var(--gutter) * 8));
+    margin: 0 0 2.22vh 0; /* 24px bottom - same as TV detail */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Episode title - Degular Variable Display Semibold 48px/40px */
+.season-episode-title {
+    font-family: 'Degular Variable', sans-serif;
+    font-weight: 600; /* Semibold */
+    font-stretch: 125%; /* Display width */
+    font-size: 4.44vh; /* 48px */
+    line-height: 3.70vh; /* 40px */
+    color: white;
+    width: calc((var(--column-width) * 9) + (var(--gutter) * 8));
+    margin: 0 0 2.22vh 0; /* 24px bottom */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Episode metadata - Degular Mono Variable Regular 24px */
+.season-episode-meta {
+    display: flex;
+    align-items: center;
+    gap: 2.22vh; /* 24px - match detail-meta */
+    font-family: 'Degular Mono Variable', sans-serif;
+    font-variation-settings: 'wght' 400; /* Regular */
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-secondary);
+    margin-bottom: 2.22vh; /* 24px - matches TV detail */
+}
+
+/* Episode plot - 5 lines to maximize available space */
+.season-episode-plot {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400; /* Regular */
+    font-size: 2.22vh; /* 24px */
+    line-height: 3.33vh; /* 36px */
+    color: rgba(255, 255, 255, 0.9);
+    width: calc((var(--column-width) * 5) + (var(--gutter) * 4));
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 5; /* 5 lines - fits with 48px gap before carousel */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Episodes group */
+.season-episodes-group {
+    flex: 0 0 auto;
+}
+
+/* Episodes scroll container - full width to screen edge */
+/* Episodes scroll container - full width to screen edge */
+.season-episodes-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
+    /* No width constraint - extends naturally to edge */
+    margin-top: 4.44vh; /* 48px - gap before episodes */
+}
+
+.season-episodes-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.season-episodes-grid {
+    display: flex;
+    gap: 1.85vh; /* 20px */
+}
+
+/* Add scrollable space after last episode */
+.season-episodes-grid::after {
+    content: '';
+    flex-shrink: 0;
+    width: 85%;
+}
+
+/* Episode card */
+.season-episode-card {
+    flex-shrink: 0;
+    width: 44.44vh; /* 480px - 16:9 at ~270px height */
+    cursor: pointer;
+}
+
+.season-episode-card.focused .season-episode-thumb-container .season-episode-outer-stroke {
+    background-color: var(--accent);
+}
+
+.season-episode-card.focused .season-episode-thumb-container .season-episode-inner-stroke {
+    background-color: #191a1a;
+}
+
+/* Episode thumbnail container */
+.season-episode-thumb-container {
+    width: 100%;
+    aspect-ratio: 16/9;
+    position: relative;
+    border-radius: 1.11vh; /* 12px */
+    overflow: hidden;
+    margin-bottom: 1.48vh; /* 16px */
+}
+
+/* Stroke styling for focus */
+.season-episode-outer-stroke {
+    position: absolute;
+    inset: 0;
+    border-radius: 1.11vh;
+    padding: 0.37vh; /* 4px */
+    background-color: transparent;
+    transition: background-color 0.3s;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.season-episode-inner-stroke {
+    position: absolute;
+    inset: 0.46vh; /* 5px */
+    border-radius: 0.65vh; /* 7px */
+    padding: 0.19vh; /* 2px */
+    background-color: transparent;
+    transition: background-color 0.3s;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.season-episode-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 0.65vh; /* 7px - matches inner stroke */
+}
+
+.season-episode-thumb-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.65vh; /* 7px - matches inner stroke */
+}
+
+/* Episode number badge */
+.season-episode-number {
+    position: absolute;
+    top: 1.11vh;
+    right: 1.11vh;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    font-family: 'Degular Mono Variable', monospace;
+    font-variation-settings: 'wght' 400; /* Regular */
+    font-size: 2.22vh; /* 24px */
+    padding: 0.37vh 0.93vh; /* 4px 10px */
+    border-radius: 0.37vh; /* 4px */
+    display: flex;
+    align-items: center;
+    gap: 0.56vh; /* 6px */
+}
+
+.season-episode-watched-icon {
+    width: 2.22vh; /* 24px */
+    height: 2.22vh;
+}
+
+.season-episode-watched-icon svg {
+    width: 2.22vh;
+    height: 2.22vh;
+}
+
+.season-episode-watched-icon svg path {
+    fill: var(--accent);
+}
+
+/* Actions row (buttons + media badges) */
+.season-actions-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2.22vh; /* 24px */
+}
+
+.season-action-buttons {
+    display: flex;
+    gap: 1.85vh; /* 20px */
+}
+
+/* Media badges */
+.season-media-badges {
+    display: flex;
+    gap: 1.11vh; /* 12px */
+    margin-right: 4.44vh; /* 48px */
+}
+
+.media-badge {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 500;
+    font-size: 1.85vh; /* 20px */
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.56vh 1.11vh; /* 6px 12px */
+    border-radius: 0.37vh; /* 4px */
+}
+
+/* ==================== CONTEXT MENU ==================== */
+
+.context-menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.context-menu-overlay.active {
+    display: flex;
+}
+
+/* Backdrop for context menus */
+.context-menu-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 9999;
+}
+
+.context-menu {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1a1a1a;
+    border-radius: 1.11vh; /* 12px */
+    padding: 2.22vh; /* 24px */
+    min-width: 32.41vh; /* 350px */
+    z-index: 10000;
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 1.85vh; /* 20px */
+    padding: 1.48vh 1.85vh; /* 16px 20px */
+    border-radius: 0.74vh; /* 8px */
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-bottom: 1.11vh; /* 12px */
+}
+
+.context-menu-item:last-child {
+    margin-bottom: 0;
+}
+
+.context-menu-item:hover,
+.context-menu-item.focused {
+    background: rgba(var(--accent-rgb), 0.2);
+}
+
+.context-menu-item.focused {
+    outline: 0.28vh solid var(--accent); /* 3px */
+    outline-offset: 0;
+}
+
+.context-menu-icon {
+    width: 2.22vh; /* 24px */
+    height: 2.22vh;
+    flex-shrink: 0;
+}
+
+.context-menu-text {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 500;
+    font-size: 2.22vh; /* 24px */
+    color: white;
+}
+
+/* =====================================================
+   HOME SCREEN STYLES
+   ===================================================== */
+
+.home-view {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #191a1a;
+    z-index: 60; /* Higher than detail-page (50) */
+}
+
+/* Fanart Background - same as detail page */
+.home-fanart {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: saturate(0.7);
+    z-index: 1;
+    transition: background-image 0.3s ease;
+}
+
+.home-fanart-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 2;
+}
+
+.home-fanart-gradient-left {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 484px;
+    height: 100%;
+    background: linear-gradient(to right, #000000, rgba(0, 0, 0, 0));
+    z-index: 2;
+    pointer-events: none;
+}
+
+.home-fanart-gradient-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 37.04vh;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0));
+    z-index: 2;
+    pointer-events: none;
+}
+
+.home-fanart-gradient-bottom-accent {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* Home Content Container - matches tv-detail-wrapper */
+.home-content {
+    position: relative;
+    z-index: 10;
+    margin-left: calc(var(--column-width) + (var(--gutter) * 2));
+    padding-top: 11.11vh; /* 120px */
+    padding-bottom: 2.22vh; /* 24px */
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    transition: margin-left 0.3s ease;
+}
+
+.side-nav.expanded ~ #contentArea .home-content {
+    margin-left: calc(var(--column-width) + (var(--gutter) * 2) + var(--nav-expanded-width) - var(--nav-compact-width));
+}
+
+/* Info Section - fixed height spacer like tv-content-spacer */
+.home-info-section {
+    height: 34.67vh;
+    flex-shrink: 0;
+}
+
+/* Title - matches tv-detail-wrapper .detail-title */
+.home-title {
+    font-family: 'Degular Variable', sans-serif;
+    font-variation-settings: 'wght' 700, 'wdth' 125;
+    font-size: 6.30vh; /* 68px */
+    line-height: 5.93vh; /* 64px */
+    color: white;
+    width: calc((var(--column-width) * 9) + (var(--gutter) * 8));
+    margin: 0.74vh 0 2.22vh 0; /* 8px top, 24px bottom */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Subtitle (episode title for TV, hidden for movies) */
+.home-subtitle {
+    font-family: 'Degular Variable', sans-serif;
+    font-weight: 600;
+    font-stretch: 125%;
+    font-size: 4.44vh; /* 48px */
+    line-height: 3.89vh; /* 42px */
+    color: white;
+    width: calc((var(--column-width) * 9) + (var(--gutter) * 8));
+    margin: 0 0 2.22vh 0; /* 24px bottom */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-subtitle:empty {
+    display: none;
+}
+
+/* Meta - matches detail-meta */
+.home-meta {
+    display: flex;
+    align-items: center;
+    gap: 2.22vh; /* 24px */
+    font-family: 'Degular Mono Variable', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-secondary);
+    margin-bottom: 2.22vh; /* 24px */
+}
+
+/* Plot - matches tv-detail-wrapper .detail-plot */
+.home-plot {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    line-height: 3.33vh; /* 36px */
+    color: rgba(255, 255, 255, 0.9);
+    width: calc((var(--column-width) * 5) + (var(--gutter) * 4));
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Carousel Section - fills remaining space to bottom */
+.home-carousel-section {
+    flex: 1;
+    overflow: hidden;
+    /* Available height: 100vh - 11.11vh (top padding) - 34.67vh (info section) - 2.22vh (bottom padding) = 52vh */
+    min-height: 52vh;
+}
+
+.home-carousel-viewport {
+    height: 100%;
+    overflow: hidden;
+}
+
+.home-carousel-track {
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+}
+
+/* Individual Carousel - fixed height matching the available space */
+.home-carousel {
+    flex-shrink: 0;
+    height: 52vh;
+}
+
+.home-carousel-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 3.15vh; /* 34px */
+    color: var(--text-primary);
+    margin-bottom: 2.22vh; /* 24px gap before cards */
+}
+
+.home-carousel-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
+}
+
+.home-carousel-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.home-carousel-grid {
+    display: flex;
+    gap: 1.85vh; /* 20px - matches tv-seasons-grid */
+}
+
+/* Add scrollable space after last card */
+.home-carousel-grid::after {
+    content: '';
+    flex-shrink: 0;
+    width: 85%;
+}
+
+/* Home cards - matches tv-season-card size */
+.home-card {
+    flex-shrink: 0;
+    width: 23.70vh; /* 256px - matches tv-season-card */
+    cursor: pointer;
+}
+
+.home-card-image-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2/3; /* Portrait poster */
+    border-radius: 1.11vh; /* 12px */
+    overflow: hidden;
+    margin-bottom: 1.48vh; /* 16px */
+}
+
+.home-card-outer-stroke {
+    position: absolute;
+    inset: 0;
+    border-radius: 1.11vh;
+    padding: 0.37vh; /* 4px */
+    background: transparent;
+    transition: background 0.15s ease;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.home-card-inner-stroke {
+    position: absolute;
+    inset: 0.46vh; /* 5px */
+    border-radius: 0.65vh; /* 7px */
+    padding: 0.19vh; /* 2px */
+    background: transparent;
+    transition: background 0.15s ease;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.home-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0.65vh;
+}
+
+.home-card-placeholder {
+    width: 100%;
+    height: 100%;
+    background: #2a2b2b;
+    border-radius: 0.65vh;
+}
+
+/* Focus state for home cards */
+.home-card.focused .home-card-outer-stroke {
+    background: var(--accent);
+}
+
+.home-card.focused .home-card-inner-stroke {
+    background: #191a1a;
+}
+
+/* Watched badge on home cards */
+.home-card .watched-badge {
+    position: absolute;
+    top: 1.11vh; /* 12px - same as movie grid */
+    right: 1.11vh; /* 12px - same as movie grid */
+    width: 4.44vh; /* 48px - same as movie grid */
+    height: 4.44vh;
+    background-color: #191a1a;
+    border-radius: 0.56vh; /* 6px - same as movie grid */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+}
+
+.home-card .watched-badge svg {
+    width: 2.22vh; /* 24px - same as movie grid */
+    height: 2.22vh;
+}
+
+.home-card .watched-badge svg path {
+    fill: var(--accent);
+}
+
+/* UP NEXT badge on home cards */
+.home-card .up-next-badge {
+    position: absolute;
+    bottom: 1.11vh; /* 12px */
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.37vh 1.11vh; /* 4px 12px */
+    background: var(--accent);
+    border-radius: 0.37vh; /* 4px */
+    font-family: 'Degular Mono', monospace;
+    font-size: 1.48vh; /* 16px */
+    font-weight: 600;
+    color: #000;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    z-index: 5;
+}
+
+/* Card info */
+.home-card-info {
+    text-align: center;
+}
+
+.home-card-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 500;
+    font-size: 2.22vh; /* 24px */
+    line-height: 2.59vh; /* 28px */
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 0.37vh; /* 4px */
+}
+
+.home-card-year {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 1.85vh; /* 20px */
+    color: var(--text-secondary);
+}
+
+/* ==================== PLAYLIST STYLES ==================== */
+
+/* Playlist Card - same structure as movie/tv cards */
+.playlist-card {
+    position: relative;
+    cursor: pointer;
+    background-color: transparent;
+    display: flex;
+    flex-direction: column;
+    scroll-margin-top: -6vh;
+}
+
+.playlist-card-poster-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2/3;
+    margin-bottom: 1.11vh;
+    transition: transform 0.3s;
+}
+
+.playlist-card:hover .playlist-card-poster-container {
+    transform: scale(1.045);
+}
+
+/* Outer stroke wrapper - cyan accent */
+.playlist-card-poster-outer-stroke {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    padding: 5px; /* Always 5px padding */
+    box-sizing: border-box;
+    background-color: transparent;
+    transition: background-color 0.3s;
+}
+
+.playlist-card.focused .playlist-card-poster-outer-stroke {
+    background-color: var(--accent); /* Show cyan on focus */
+}
+
+/* Inner stroke wrapper - dark background */
+.playlist-card-poster-inner-stroke {
+    width: 100%;
+    height: 100%;
+    border-radius: 7px;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 2px; /* Always 2px padding */
+    background-color: transparent;
+    transition: background-color 0.3s;
+}
+
+.playlist-card.focused .playlist-card-poster-inner-stroke {
+    background-color: #191a1a; /* Show dark on focus */
+}
+
+/* Keyboard Focus */
+.playlist-card.focused {
+    z-index: 10;
+}
+
+.playlist-card.focused .playlist-card-poster-container {
+    transform: scale(1.045);
+}
+
+.playlist-card-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 5px; /* Small radius to fit inside strokes */
+}
+
+/* Playlist collage (4 posters) */
+.playlist-card-collage {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    width: 100%;
+    height: 100%;
+    gap: 2px;
+    background: #131313;
+    border-radius: 5px; /* Match poster radius */
+    overflow: hidden;
+}
+
+.playlist-collage-quadrant {
+    overflow: hidden;
+    background: #2a2a2a;
+}
+
+.playlist-collage-quadrant img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Playlist card info */
+.playlist-card-info {
+    padding: 0 0.37vh;
+    text-align: center;
+}
+
+.playlist-card-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 500;
+    font-size: 2.22vh;
+    line-height: 2.59vh;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.playlist-card-count {
+    font-family: 'Degular Mono', monospace;
+    font-size: 1.57vh;
+    font-variation-settings: 'wght' 400;
+    color: var(--text-tertiary);
+    text-align: center;
+    line-height: 1.02vh;
+    margin-top: 1.11vh;
+    text-transform: uppercase;
+}
+
+/* Empty state */
+.playlist-empty-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10vh 0;
+}
+
+.playlist-empty-icon {
+    width: 8vh;
+    height: 8vh;
+    opacity: 0.3;
+    margin-bottom: 2vh;
+}
+
+.playlist-empty-text {
+    font-family: 'Degular', sans-serif;
+    font-size: 3vh;
+    color: var(--text-primary);
+    opacity: 0.5;
+    margin-bottom: 3vh;
+}
+
+/* ==================== PLAYLIST DETAIL ==================== */
+
+/* ==================== PLAYLIST DETAIL PAGE ==================== */
+
+.playlist-detail-wrapper {
+    display: flex;
+    align-items: flex-start;
+    padding-top: var(--topbar-height);
+    position: relative;
+    z-index: 5;
+    padding-left: calc(var(--nav-compact-width) + 2.22vh); /* Nav width + 24px */
+    padding-right: 4.44vh; /* 48px */
+    gap: 4.44vh; /* 48px between poster and content */
+    transition: padding-left 0.3s ease;
+}
+
+/* When nav is expanded, shift content right */
+.side-nav.expanded ~ #detailPage .playlist-detail-wrapper {
+    padding-left: calc(var(--nav-expanded-width) + 2.22vh); /* Expanded nav width + 24px */
+}
+
+/* Poster area - same size as movie detail poster */
+.playlist-detail-poster-area {
+    position: relative;
+    width: 51.85vh; /* 560px - same as detail-poster-container */
+    height: 77.78vh; /* 840px */
+    flex-shrink: 0;
+}
+
+/* Custom poster view (single image) */
+.playlist-detail-custom-poster {
+    width: 100%;
+    height: 100%;
+    border-radius: 1.11vh; /* 12px */
+    overflow: hidden;
+}
+
+.playlist-detail-custom-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Collage view (2x2 grid) */
+.playlist-detail-collage-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    width: 100%;
+    height: 100%;
+    border-radius: 1.11vh; /* 12px */
+    overflow: hidden;
+}
+
+.playlist-detail-collage-container .playlist-collage-quadrant {
+    overflow: hidden;
+    background: #2a2a2a;
+}
+
+.playlist-detail-collage-container .playlist-collage-quadrant img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Single poster view */
+.playlist-detail-single-poster {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    border-radius: 1.11vh;
+    overflow: hidden;
+}
+
+.playlist-detail-single-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Watched badge - same as movie detail */
+.playlist-poster-watched-badge {
+    position: absolute;
+    top: 1.11vh;
+    right: 1.11vh;
+    width: 8.89vh; /* 96px - same as detail page */
+    height: 8.89vh;
+    background-color: #191a1a;
+    border-radius: 1.11vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.playlist-poster-watched-badge svg {
+    width: 4.44vh;
+    height: 4.44vh;
+}
+
+.playlist-poster-watched-badge svg path {
+    fill: var(--accent);
+}
+
+/* Progress bar - same as movie detail */
+.playlist-poster-progress {
+    position: absolute;
+    bottom: 4.44vh;
+    left: 4.44vh;
+    right: 4.44vh;
+    height: 3.33vh;
+    padding: 0.56vh;
+    background-color: #191a1a;
+    border-radius: 0.74vh;
+    box-sizing: border-box;
+}
+
+.playlist-poster-progress-bar {
+    height: 2.22vh;
+    background: var(--accent);
+    border-radius: 0.37vh;
+}
+
+/* Content area */
+.playlist-detail-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    margin-top: 2.22vh; /* 24px */
+    height: 77.78vh; /* Same as poster height */
+    box-sizing: border-box;
+}
+
+/* Title - same as movie detail */
+.playlist-detail-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 700;
+    font-size: 8.89vh; /* 96px */
+    line-height: 7.22vh; /* 78px */
+    color: var(--text-primary);
+    margin: 0 0 2.22vh 0;
+}
+
+/* Meta - same as movie detail */
+.playlist-detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 2.22vh; /* 24px */
+    font-family: 'Degular Mono', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-primary);
+    margin-bottom: 2.22vh;
+}
+
+/* Buttons row - uses detail-button class from movie detail */
+.playlist-detail-buttons {
+    display: flex;
+    gap: 1.48vh; /* 16px */
+    margin-bottom: 3.7vh; /* 40px */
+}
+
+/* Item list */
+.playlist-detail-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 60vh; /* Extra padding so last items can scroll to top position */
+    scroll-behavior: smooth;
+}
+
+/* Hide scrollbar but keep functionality */
+.playlist-detail-list::-webkit-scrollbar {
+    display: none;
+}
+
+/* Individual list item */
+.playlist-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2.22vh; /* 24px all around - same as focused */
+    border-bottom: 1px solid #3f4040;
+}
+
+.playlist-item:last-child {
+    border-bottom: none;
+}
+
+/* Focused item - 20% white fill, hide adjacent dividers with opacity */
+.playlist-item.focused {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 1.11vh; /* 12px */
+    border-bottom-color: transparent;
+}
+
+/* Hide divider of item before focused (using opacity to prevent layout shift) */
+.playlist-item:has(+ .playlist-item.focused) {
+    border-bottom-color: transparent;
+}
+
+/* Hide divider of item before reordering */
+.playlist-item:has(+ .playlist-item.reordering) {
+    border-bottom-color: transparent;
+}
+
+.playlist-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Item title row */
+.playlist-item-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.93vh; /* 10px */
+    margin-bottom: 0.37vh; /* 4px */
+}
+
+.playlist-item-watched-icon {
+    width: 2.22vh; /* 24px */
+    height: 2.22vh;
+    flex-shrink: 0;
+}
+
+/* Item title - 34px */
+.playlist-item-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 3.15vh; /* 34px */
+    line-height: 1.2; /* Proportional line-height */
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Item meta - same as movie detail meta */
+.playlist-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 2.22vh; /* 24px */
+    font-family: 'Degular Mono', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-secondary);
+}
+
+.playlist-item-meta-divider {
+    width: 1px;
+    height: 2.22vh;
+    background-color: var(--accent);
+}
+
+/* Item action buttons - hidden until focused */
+.playlist-item-actions {
+    display: none;
+    gap: 1.48vh; /* 16px */
+    margin-left: 2.22vh;
+    flex-shrink: 0;
+}
+
+.playlist-item.focused .playlist-item-actions {
+    display: flex;
+}
+
+/* Reordering mode - cyan border around row */
+.playlist-item.reordering {
+    background: rgba(var(--accent-rgb), 0.1);
+    border: 2px solid var(--accent);
+    border-radius: 1.11vh; /* 12px */
+    padding: calc(2.22vh - 1px); /* Account for border difference (2px vs 1px) */
+}
+
+.playlist-item.reordering .playlist-item-actions {
+    display: flex;
+}
+
+/* ==================== ADD TO PLAYLIST OVERLAY ==================== */
+
+#addToPlaylistContainer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    background: #131313;
+}
+
+.add-to-playlist-overlay {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 4.63vh;
+    box-sizing: border-box;
+}
+
+.add-to-playlist-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 3vh;
+    padding: 0 2vh;
+}
+
+.add-to-playlist-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.5vh;
+    flex: 1;
+}
+
+.add-to-playlist-icon {
+    width: 3vh;
+    height: 3vh;
+}
+
+.add-to-playlist-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 2.5vh;
+    color: var(--text-primary);
+}
+
+.add-to-playlist-movie-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 500;
+    font-size: 2.22vh;
+    color: var(--text-primary);
+    text-align: center;
+    flex: 2;
+}
+
+.add-to-playlist-header-right {
+    flex: 1;
+}
+
+.add-to-playlist-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 2.78vh 1.85vh;
+    overflow-y: auto;
+    padding: 1vh;
+}
+
+/* Create New Playlist card */
+.create-playlist-card-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2a2a2a;
+    border-radius: 5px; /* Match poster radius */
+}
+
+.create-playlist-icon {
+    width: 6vh;
+    height: 6vh;
+    opacity: 0.7;
+}
+
+/* Hover icon overlay on playlist cards - accent overlay with centered icon */
+.add-to-playlist-hover-icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(var(--accent-rgb), 0.2);
+    border-radius: 5px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+.add-to-playlist-hover-icon img {
+    width: 6vh;
+    height: 6vh;
+}
+
+.add-to-playlist-card.focused .add-to-playlist-hover-icon {
+    display: flex;
+}
+
+/* Already in playlist overlay - no longer needed as separate style */
+.already-in-playlist-overlay {
+    display: none;
+}
+
+.add-to-playlist-card.already-in-playlist .playlist-card-poster-inner-stroke {
+    position: relative;
+}
+
+/* ==================== CREATE PLAYLIST MODAL ==================== */
+
+#createPlaylistModalContainer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1100;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.create-playlist-modal {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.create-playlist-content {
+    background: #3a3a3a;
+    border-radius: 1.5vh;
+    padding: 3vh 4vh;
+    min-width: 60vh;
+    max-width: 80vh;
+}
+
+.create-playlist-header {
+    font-family: 'Degular Mono', monospace;
+    font-size: 1.67vh;
+    color: var(--text-secondary);
+    letter-spacing: 0.1em;
+    margin-bottom: 1vh;
+}
+
+.create-playlist-input {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 4vh;
+    color: var(--text-primary);
+    min-height: 5vh;
+    margin-bottom: 3vh;
+    border-bottom: 2px solid transparent;
+    padding-bottom: 1vh;
+}
+
+.create-playlist-input:empty::after {
+    content: 'Playlist Name';
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+/* Keyboard styles */
+.create-playlist-keyboard {
+    display: flex;
+    flex-direction: column;
+    gap: 1vh;
+}
+
+.keyboard-row {
+    display: flex;
+    gap: 1vh;
+    justify-content: center;
+}
+
+/* Make the keyboard rows have consistent width */
+.create-playlist-keyboard {
+    display: flex;
+    flex-direction: column;
+    gap: 1vh;
+    width: 100%;
+}
+
+.keyboard-key {
+    min-width: 5.5vh;
+    height: 5.5vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2a2a2a;
+    border: 1px solid transparent;
+    border-radius: 0.5vh;
+    font-family: 'Degular', sans-serif;
+    font-size: 2.22vh;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.keyboard-key:hover,
+.keyboard-key.focused {
+    background: rgba(var(--accent-rgb), 0.2);
+    border-color: var(--accent);
+}
+
+.keyboard-key img {
+    width: 2.5vh;
+    height: 2.5vh;
+}
+
+.keyboard-key-special,
+.keyboard-key-nav {
+    min-width: 5.5vh;
+}
+
+.keyboard-key-mode {
+    min-width: 5.5vh;
+    font-size: 1.85vh;
+}
+
+/* Space bar = 3 keys wide (3 * 5.5vh + 2 * 1vh gap) */
+.keyboard-key-space {
+    width: 18.5vh;
+    min-width: 18.5vh;
+}
+
+/* Confirm = 2 keys wide (2 * 5.5vh + 1 * 1vh gap) */
+.keyboard-key-confirm {
+    width: 12vh;
+    min-width: 12vh;
+    background: #2a2a2a;
+    opacity: 0.5;
+}
+
+.keyboard-key-confirm.enabled {
+    background: #B0F1EF;
+    opacity: 1;
+}
+
+.keyboard-key-confirm.enabled img {
+    filter: brightness(0);
+}
+
+.keyboard-key-confirm.focused.enabled {
+    background: rgba(var(--accent-rgb), 0.2);
+    border-color: var(--accent);
+}
+
+.keyboard-key-confirm.focused.enabled img {
+    filter: brightness(0) invert(1); /* White icon when focused */
+}
+
+/* ==================== PLAYLIST TOAST ==================== */
+
+.playlist-toast {
+    position: fixed;
+    bottom: 3vh;
+    right: 3vh;
+    display: flex;
+    align-items: center;
+    gap: 1vh;
+    padding: 1.5vh 2.5vh;
+    border-radius: 0.5vh;
+    z-index: 2000;
+    animation: toastSlideIn 0.3s ease;
+}
+
+.playlist-toast.toast-success {
+    background: #43612a;
+}
+
+.playlist-toast.toast-error {
+    background: #652626;
+}
+
+.playlist-toast-icon {
+    width: 2.5vh;
+    height: 2.5vh;
+}
+
+.playlist-toast-text {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 2vh;
+    color: #fff;
+}
+
+.playlist-toast-fade {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+@keyframes toastSlideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Blinking cursor in playlist input */
+.create-playlist-input .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.1em;
+    background: var(--accent);
+    margin: 0 1px;
+    vertical-align: text-bottom;
+    animation: cursorBlink 1s step-end infinite;
+}
+
+@keyframes cursorBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* ==================== MULTI-SELECT MODE ==================== */
+
+/* Multi-select mode - all posters at 30% opacity */
+.multi-select-mode .movie-card .movie-card-poster {
+    opacity: 0.3;
+    transition: opacity 0.2s ease;
+}
+
+/* Selected items have full opacity */
+.multi-select-mode .movie-card.multi-selected .movie-card-poster {
+    opacity: 1;
+}
+
+/* Checkbox badge - positioned on left side, same size as watched badge */
+.multi-select-checkbox {
+    position: absolute;
+    top: 1.11vh;
+    left: 1.11vh;
+    width: 4.44vh;
+    height: 4.44vh;
+    background-color: #191a1a;
+    border-radius: 0.56vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+}
+
+.multi-select-checkbox img {
+    width: 2.22vh;
+    height: 2.22vh;
+}
+
+/* Selected border - white stroke (same style as focus but white) */
+.multi-select-mode .movie-card.multi-selected .movie-card-poster-outer-stroke {
+    background-color: #ffffff;
+}
+
+.multi-select-mode .movie-card.multi-selected .movie-card-poster-inner-stroke {
+    background-color: #191a1a;
+}
+
+/* Focus overrides selected border (uses accent color) */
+.multi-select-mode .movie-card.focused .movie-card-poster-outer-stroke {
+    background-color: var(--accent);
+}
+
+.multi-select-mode .movie-card.focused .movie-card-poster-inner-stroke {
+    background-color: #191a1a;
+}
+
+/* Multi-select indicator in top bar */
+.multi-select-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.75vh;
+    padding: 0.5vh 1.5vh;
+    background: rgba(var(--accent-rgb), 0.2);
+    border: 1px solid var(--accent);
+    border-radius: 0.5vh;
+    margin-left: 2vh;
+}
+
+.multi-select-indicator-icon {
+    width: 2vh;
+    height: 2vh;
+}
+
+.multi-select-indicator-text {
+    font-family: 'Degular', sans-serif;
+    font-size: 1.67vh;
+    color: var(--text-primary);
+}

@@ -1,0 +1,192 @@
+/* Search Page Styles */
+
+.search-page {
+    /* Uses .content-area styles from main styles.css */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Search Input Display (above keyboard only) */
+.search-input-display {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600, 'wdth' 125; /* Semibold weight, Display width */
+    font-size: 5.56vh; /* 60px */
+    line-height: 0.85; /* 85% */
+    letter-spacing: 0.01em; /* 1% tracking */
+    color: var(--text-primary);
+    min-height: 7.41vh; /* 80px - reduced */
+    margin-bottom: 1.85vh; /* 20px - reduced */
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    /* Match keyboard width: 6 keys * 7.41vh + 5 gaps * 1.48vh */
+    width: calc(7.41vh * 6 + 1.48vh * 5);
+}
+
+/* Two-column layout: keyboard left, results right */
+.search-layout {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 3.70vh; /* 40px - reduced gap */
+    align-items: start; /* Align to top */
+    flex: 1;
+    min-width: 0; /* Allow grid to shrink */
+}
+
+/* Left column - keyboard (fixed width, doesn't move) */
+.search-keyboard-column {
+    /* Fixed width based on content */
+}
+
+/* Right column - results (can scroll internally) */
+.search-results-column {
+    min-width: 0; /* Critical: allows grid item to shrink */
+    overflow: hidden; /* Prevents children from pushing */
+    margin-top: -9.26vh; /* Move up to align with top bar area */
+}
+
+/* On-Screen Keyboard */
+.keyboard-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.48vh; /* 16px */
+}
+
+.keyboard-row {
+    display: flex;
+    gap: 1.48vh; /* 16px */
+}
+
+.key-btn {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 500; /* Medium */
+    font-size: 3.15vh; /* 34px */
+    color: var(--text-primary);
+    background: #141515;
+    border: none;
+    border-radius: 1.11vh; /* 12px */
+    width: 7.41vh; /* 80px */
+    height: 7.41vh; /* 80px */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+/* Space and clear buttons - 3 columns wide */
+.key-btn.key-space,
+.key-btn.key-clear {
+    width: calc(7.41vh * 3 + 1.48vh * 2); /* 3 buttons + 2 gaps */
+}
+
+/* Icon buttons - hide text, show icon */
+.key-btn.key-space,
+.key-btn.key-clear {
+    font-size: 0; /* Hide text */
+    background-size: 4.44vh 4.44vh; /* 48x48 icon */
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.key-btn.key-space {
+    background-image: url('assets/icons/space-text.svg');
+}
+
+.key-btn.key-clear {
+    background-image: url('assets/icons/delete-left.svg');
+}
+
+.key-btn:hover {
+    background-color: #3a3a3a;
+}
+
+/* Focused state - accent fill at 20% + 5px inside stroke */
+.key-btn.focused {
+    background-color: rgba(var(--accent-rgb), 0.2); /* Accent at 20% opacity */
+    box-shadow: inset 0 0 0 0.46vh var(--accent); /* 5px inside stroke */
+    transform: none; /* No scale */
+}
+
+/* Icon buttons keep their background images on focus */
+.key-btn.key-space.focused {
+    background-image: url('assets/icons/space-text.svg');
+    background-size: 4.44vh 4.44vh;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.key-btn.key-clear.focused {
+    background-image: url('assets/icons/delete-left.svg');
+    background-size: 4.44vh 4.44vh;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* Search Results */
+.search-results {
+    /* Container for results sections */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.results-section {
+    /* Each section takes equal space */
+}
+
+.results-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 3.15vh; /* 34px */
+    color: var(--text-primary);
+    margin-bottom: 1.11vh; /* 12px */
+    display: none; /* Hidden by default, shown when results exist */
+}
+
+.results-title.visible {
+    display: block;
+}
+
+/* Horizontal carousel */
+.results-carousel {
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-bottom: 1.48vh; /* 16px */
+    scroll-behavior: smooth;
+    /* Hide scrollbar */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.results-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+/* Results grid */
+.results-grid {
+    display: flex;
+    gap: 1.48vh; /* 16px - tighter */
+    padding-bottom: 0.56vh; /* 6px for breathing room */
+}
+
+/* Smaller cards for search results */
+.results-grid .cast-card {
+    width: 10vw; /* Smaller width */
+}
+
+.results-grid .cast-card-image-container {
+    height: 15vw; /* Proportional height */
+}
+
+/* Empty state */
+.results-empty {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.78vh; /* 30px */
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 5.56vh; /* 60px */
+    grid-column: 1 / -1; /* Span both columns */
+}

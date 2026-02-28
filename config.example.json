@@ -1,0 +1,12 @@
+{
+  "moviesPath": "/path/to/your/movies",
+  "tvShowsPath": "/path/to/your/tv-shows",
+  "jellyfinServer": "http://your-jellyfin-server:8096",
+  "jellyfinApiKey": "your-api-key-here",
+  "jellyfinUserId": "your-user-id-here",
+  "jellyfinEnabled": true,
+  "subtitleSize": 100,
+  "subtitlePosition": 100,
+  "subtitleColorIndex": 0,
+  "subtitleBackgroundIndex": 0
+}

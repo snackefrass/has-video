@@ -1,0 +1,37 @@
+{
+  "name": "jellyfin-custom-app",
+  "version": "1.0.0",
+  "description": "Custom Jellyfin client with VLC integration",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:linux": "electron-builder --linux"
+  },
+  "keywords": ["jellyfin", "vlc", "media"],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "xml2js": "^0.6.2"
+  },
+  "build": {
+    "appId": "com.yourname.jellyfin-client",
+    "productName": "Jellyfin Custom Client",
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "AudioVideo",
+      "icon": "build/icon.png"
+    },
+    "files": [
+      "src/**/*",
+      "config.json"
+    ]
+  }
+}

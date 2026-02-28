@@ -1,0 +1,642 @@
+/* OSD Overlay Styles */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+@font-face {
+    font-family: 'Degular';
+    src: url('assets/fonts/DegularVar-TextThin.ttf') format('truetype-variations');
+    font-weight: 1 999;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Degular Mono';
+    src: url('assets/fonts/DegularMonoVar-Thin.ttf') format('truetype-variations');
+    font-weight: 1 999;
+    font-style: normal;
+}
+
+:root {
+    --accent: #39ddd8;
+    --accent-rgb: 57, 221, 216; /* RGB values of accent color for rgba() */
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+}
+
+html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: transparent; /* Back to transparent so video shows through */
+    font-family: 'Degular', sans-serif;
+    color: var(--text-primary);
+    cursor: default; /* unclutter handles cursor hiding at X11 level */
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+}
+
+#osd-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+#osd-container.osd-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Subtitle toast notification */
+.subtitle-toast {
+    position: fixed;
+    top: 2.22vh; /* Align with clock vertical position */
+    left: 6.67vh; /* 72px at 1080p */
+    display: flex;
+    align-items: center;
+    gap: 1.11vh; /* 12px at 1080p */
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600; /* Semibold */
+    font-size: 3.15vh; /* 34px at 1080p */
+    line-height: 2.59vh; /* 28px at 1080p */
+    color: var(--text-primary); /* White text */
+    background-color: #175856; /* Solid teal fill */
+    border-radius: 0.74vh; /* 8px at 1080p */
+    padding: 2.22vh; /* 24px all around at 1080p */
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.subtitle-toast-icon {
+    width: 3.15vh; /* Match font size - 34px at 1080p */
+    height: 3.15vh;
+    flex-shrink: 0;
+}
+
+.subtitle-toast.show {
+    opacity: 1;
+}
+
+/* Background gradients - three layers */
+.osd-gradient-base {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 50vh; /* Half screen height */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent); /* Gradient instead of solid */
+    z-index: 0;
+    pointer-events: none;
+}
+
+.osd-gradient {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 100vh; /* Full height */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.osd-gradient-accent {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 100vh; /* Full height */
+    background: linear-gradient(to top, rgba(var(--accent-rgb), 0.25), transparent);
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Top bar with clock - matching detail page */
+.osd-top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: flex-start; /* Align to top */
+    justify-content: flex-end;
+    padding: 2.22vh 4.44vh 0 0; /* Top right padding only */
+    z-index: 10;
+    pointer-events: none; /* Let clicks pass through */
+}
+
+.osd-clock-container {
+    display: flex;
+    pointer-events: auto; /* But clock itself is clickable */
+}
+
+#osd-clock {
+    font-family: 'Degular Mono', monospace;
+    font-variation-settings: 'wght' 600; /* Semibold - matching detail page */
+    font-size: 2.22vh; /* 24px at 1080p - matching detail page */
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Bottom bar */
+.osd-bottom-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 6.67vh; /* 72px at 1080p */
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 2.22vh; /* 24px at 1080p */
+}
+
+/* Movie info - Row 1 */
+.osd-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1.11vh; /* 12px at 1080p */
+}
+
+.osd-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 700; /* Bold */
+    font-size: 6.30vh; /* 68px at 1080p */
+    line-height: 5.19vh; /* 56px at 1080p */
+    color: var(--text-primary);
+}
+
+.osd-meta {
+    font-family: 'Degular Mono', monospace;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px at 1080p */
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 1.11vh; /* 12px at 1080p */
+    justify-content: space-between; /* Full width */
+    width: 100%;
+}
+
+.osd-meta-left {
+    display: flex;
+    align-items: center;
+    gap: 1.11vh;
+}
+
+.osd-divider {
+    color: var(--accent);
+}
+
+.osd-resolution-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.74vh; /* 8px at 1080p */
+    padding: 0 1.11vh; /* 0 12px at 1080p */
+    height: 4.44vh; /* 48px at 1080p */
+    background-color: #000000;
+    border-radius: 0.74vh; /* 8px at 1080p */
+}
+
+.osd-badge-icon {
+    width: 2.22vh; /* 24px at 1080p */
+    height: 2.22vh;
+}
+
+.osd-badge-text {
+    font-family: 'Degular Mono', monospace;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px at 1080p */
+    color: var(--text-primary);
+}
+
+/* Progress bar - Row 2 */
+.osd-progress-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.11vh; /* 12px at 1080p between bar and times */
+}
+
+.osd-progress-bar {
+    width: 100%;
+    height: 0.74vh; /* 8px at 1080p */
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 0.37vh; /* 4px at 1080p */
+    position: relative;
+    cursor: pointer;
+}
+
+.osd-progress-filled {
+    height: 100%;
+    background-color: var(--accent);
+    border-radius: 0.37vh; /* 4px at 1080p */
+    width: 10%; /* Will be updated dynamically */
+    position: relative;
+}
+
+.osd-progress-handle {
+    position: absolute;
+    width: 2.22vh; /* 24px at 1080p */
+    height: 2.22vh;
+    background-color: var(--accent);
+    border-radius: 0.37vh; /* 4px at 1080p */
+    top: 50%;
+    transform: translate(-50%, -50%);
+    left: 10%; /* Will be updated dynamically */
+    cursor: pointer;
+}
+
+.osd-progress-handle.active {
+    background-color: var(--accent);
+    box-shadow: 0 0 0 0.37vh var(--accent); /* Glow effect */
+}
+
+/* Time displays - Still part of Row 2, below progress bar */
+.osd-time-row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.osd-time-elapsed,
+.osd-time-remaining {
+    font-family: 'Degular Mono', monospace;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px at 1080p */
+    color: var(--text-primary);
+}
+
+/* Controls row - Row 3 */
+.osd-controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Full width with items at edges */
+    width: 100%;
+}
+
+/* Buttons */
+.osd-button {
+    width: 6.67vh; /* 72px at 1080p */
+    height: 6.67vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    border: 0.09vh solid var(--text-primary); /* 1px at 1080p */
+    border-radius: 0.74vh; /* 8px at 1080p */
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.osd-button:hover,
+.osd-button.active {
+    background-color: rgba(var(--accent-rgb), 0.2);
+    border: 0.28vh solid var(--accent); /* 3px at 1080p */
+}
+
+/* Subtitle button when subtitles are enabled */
+.osd-button.subtitle-enabled {
+    background-color: rgba(var(--accent-rgb), 0.2);
+    border: none;
+}
+
+/* Focus/hover overrides enabled state - adds stroke */
+.osd-button.subtitle-enabled:hover,
+.osd-button.subtitle-enabled.active {
+    background-color: rgba(var(--accent-rgb), 0.2);
+    border: 0.28vh solid var(--accent); /* 3px at 1080p */
+}
+
+.osd-button-icon {
+    width: 2.22vh; /* 24px at 1080p */
+    height: 2.22vh;
+}
+
+.osd-button.osd-hidden {
+    display: none;
+}
+
+/* Playback controls (left side group) */
+.osd-playback-controls {
+    display: flex;
+    gap: 2.22vh; /* 24px at 1080p */
+    align-items: center;
+}
+
+/* Settings controls (right side group) */
+.osd-settings-controls {
+    display: flex;
+    gap: 2.22vh; /* 24px at 1080p */
+    align-items: center;
+}
+
+/* ========================================
+   Up Next Episode Modal
+   ======================================== */
+
+.up-next-modal {
+    position: fixed;
+    bottom: 6.67vh; /* 72px */
+    right: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 2.22vh; /* 24px */
+    padding: 2.22vh; /* 24px */
+    padding-right: 6.67vh; /* 72px */
+    background-color: #191a1a;
+    border-radius: 0.74vh 0 0 0.74vh; /* 8px rounded on left side only */
+    z-index: 1000;
+    transform: translateX(0);
+    transition: transform 0.8s cubic-bezier(0.87, 0, 0.13, 1);
+}
+
+.up-next-modal.up-next-hidden {
+    transform: translateX(100%);
+}
+
+.up-next-thumbnail-container {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.up-next-thumbnail {
+    height: 20.74vh; /* 224px */
+    width: 36.87vh; /* 398px (224 * 16/9) */
+    object-fit: cover;
+    border-radius: 0.37vh; /* 4px */
+}
+
+/* Poster style for movie thumbnails (2:3 aspect ratio) */
+.up-next-thumbnail.up-next-poster {
+    width: 13.83vh; /* 224px * 2/3 = ~149px to maintain 2:3 ratio at same height */
+    object-fit: cover;
+}
+
+.up-next-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.up-next-countdown {
+    font-family: 'Degular Mono', monospace;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-primary);
+    margin-bottom: 1.11vh; /* 12px gap to episode info */
+}
+
+.up-next-timer-accent {
+    color: var(--accent);
+}
+
+/* Episode info group (title + meta) */
+.up-next-episode-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.37vh; /* 4px */
+}
+
+.up-next-title {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 600;
+    font-size: 4.44vh; /* 48px */
+    line-height: 3.89vh; /* 42px */
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 24ch;
+}
+
+.up-next-meta {
+    display: flex;
+    align-items: center;
+    gap: 2.22vh; /* 24px */
+    font-family: 'Degular Mono', monospace;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px */
+    color: var(--text-primary);
+}
+
+.up-next-meta-divider {
+    width: 1px;
+    height: 2.22vh; /* 24px */
+    background-color: var(--accent);
+}
+
+.up-next-buttons {
+    display: flex;
+    gap: 1.48vh; /* 16px */
+    flex: auto; /* Push to bottom, align with thumbnail */
+    align-items: flex-end;
+}
+
+.up-next-button {
+    display: flex;
+    align-items: center;
+    gap: 1.11vh; /* 12px */
+    height: 6.67vh; /* 72px */
+    width: 6.67vh; /* 72px - square by default */
+    padding: 0 0 0 2.22vh; /* Left padding to position icon */
+    background-color: transparent;
+    border: 1px solid var(--text-primary);
+    border-radius: 0.74vh; /* 8px */
+    cursor: pointer;
+    transition: width 0.6s ease, background-color 0.6s ease;
+    overflow: hidden;
+    justify-content: flex-start;
+}
+
+.up-next-button-icon {
+    width: 2.22vh; /* 24px */
+    height: 2.22vh;
+    flex-shrink: 0;
+    filter: brightness(0) invert(1); /* Make icons white */
+}
+
+.up-next-button-text {
+    font-family: 'Degular', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.59vh; /* 28px */
+    color: var(--text-primary);
+    white-space: nowrap;
+    transition: width 0.6s ease, opacity 0.6s ease;
+    width: 0;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.up-next-button:hover,
+.up-next-button.focused {
+    background-color: rgba(var(--accent-rgb), 0.2);
+    border: 3px solid var(--accent);
+    width: auto;
+    padding: 0 2.22vh 0 2.22vh;
+    gap: 1.11vh;
+    justify-content: flex-start;
+}
+
+.up-next-button:hover .up-next-button-text,
+.up-next-button.focused .up-next-button-text {
+    font-variation-settings: 'wght' 700;
+    width: auto;
+    opacity: 1;
+}
+
+/* More Options Panel */
+.more-options-panel {
+    position: fixed;
+    top: 50%;
+    right: 6.67vh; /* 72px at 1080p */
+    transform: translateY(-50%);
+    background-color: #1a1a1a; /* Main app background color */
+    border-radius: 1.48vh; /* 16px at 1080p */
+    padding: 2.22vh; /* 24px at 1080p */
+    z-index: 150;
+    width: 44.44vh; /* 480px at 1080p */
+    opacity: 1;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.more-options-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%) translateX(2vh);
+}
+
+.more-options-header {
+    margin-bottom: 1.11vh; /* 12px at 1080p */
+    padding-bottom: 0.37vh; /* 4px at 1080p */
+    border-bottom: 1px solid #228582;
+}
+
+.more-options-title {
+    font-family: 'Degular Mono', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 1.57vh; /* 17px at 1080p */
+    color: var(--text-primary);
+    letter-spacing: 0.05em;
+}
+
+.more-options-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.more-options-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.more-options-section.hidden {
+    display: none;
+}
+
+.more-options-section-header {
+    font-family: 'Degular Variable', sans-serif;
+    font-variation-settings: 'wght' 600, 'wdth' 125;
+    font-size: 3.15vh; /* 34px at 1080p */
+    line-height: 2.96vh; /* 32px at 1080p */
+    color: var(--text-primary);
+    margin-top: 1.48vh; /* 16px at 1080p */
+    margin-bottom: 1.11vh; /* 12px at 1080p */
+}
+
+.more-options-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.11vh; /* 12px at 1080p */
+    border-radius: 0.74vh; /* 8px at 1080p */
+    transition: background-color 0.15s ease;
+}
+
+.more-options-row.focused {
+    background-color: rgba(255, 255, 255, 0.2); /* 20% white */
+}
+
+.more-options-label {
+    font-family: 'Degular Variable', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px at 1080p */
+    color: var(--text-primary);
+}
+
+.more-options-control {
+    display: flex;
+    align-items: center;
+    gap: 0.74vh; /* 8px minimum gap at 1080p */
+}
+
+.more-options-value {
+    font-family: 'Degular Mono', sans-serif;
+    font-variation-settings: 'wght' 400;
+    font-size: 2.22vh; /* 24px at 1080p */
+    color: var(--text-primary);
+    min-width: 9.26vh; /* ~100px - enough for "Magenta" with padding */
+    text-align: center;
+    transition: color 0.15s ease;
+}
+
+.more-options-row.focused .more-options-value {
+    color: var(--accent);
+}
+
+.more-options-arrow {
+    width: 2.96vh; /* 32px at 1080p */
+    height: 2.96vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 0.37vh; /* 4px at 1080p */
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.more-options-arrow img {
+    width: 1.48vh; /* 16px at 1080p */
+    height: 1.48vh;
+}
+
+/* Focused row arrows get accent border and fill */
+.more-options-row.focused .more-options-arrow {
+    border-color: var(--accent);
+    background-color: rgba(var(--accent-rgb), 0.2);
+}
+
+/* Arrow flash effect when pressed */
+.more-options-arrow.arrow-flash {
+    background-color: rgba(var(--accent-rgb), 0.5);
+    border-color: var(--accent);
+}
+
+/* Hide text-only subtitle options for bitmap subtitles */
+.more-options-row.text-sub-only.hidden {
+    display: none;
+}

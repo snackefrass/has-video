@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>OSD Overlay</title>
+    <link rel="stylesheet" href="osd.css">
+</head>
+<body>
+    <!-- Toast notification - outside OSD container so it's always visible -->
+    <div id="subtitle-toast" class="subtitle-toast">
+        <img id="subtitle-toast-icon" class="subtitle-toast-icon" src="assets/icons/subtitles.svg" alt="">
+        <span id="subtitle-toast-text">Subtitles On</span>
+    </div>
+    
+    <!-- More Options Panel -->
+    <div id="more-options-panel" class="more-options-panel more-options-hidden">
+        <div class="more-options-header">
+            <span class="more-options-title">PLAYBACK OPTIONS</span>
+        </div>
+        <div class="more-options-content">
+            <!-- Speed -->
+            <div class="more-options-row" data-option="speed">
+                <span class="more-options-label">Speed</span>
+                <div class="more-options-control">
+                    <button class="more-options-arrow" data-dir="left">
+                        <img src="assets/icons/caret-left.svg" alt="Decrease">
+                    </button>
+                    <span class="more-options-value" id="speed-value">1x</span>
+                    <button class="more-options-arrow" data-dir="right">
+                        <img src="assets/icons/caret-right.svg" alt="Increase">
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Subtitles Section -->
+            <div id="subtitles-section" class="more-options-section">
+                <div class="more-options-section-header">Subtitles</div>
+                
+                <div class="more-options-row" data-option="sub-size">
+                    <span class="more-options-label">Size</span>
+                    <div class="more-options-control">
+                        <button class="more-options-arrow" data-dir="left">
+                            <img src="assets/icons/caret-left.svg" alt="Decrease">
+                        </button>
+                        <span class="more-options-value" id="sub-size-value">100%</span>
+                        <button class="more-options-arrow" data-dir="right">
+                            <img src="assets/icons/caret-right.svg" alt="Increase">
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="more-options-row" data-option="sub-pos">
+                    <span class="more-options-label">Position</span>
+                    <div class="more-options-control">
+                        <button class="more-options-arrow" data-dir="left">
+                            <img src="assets/icons/caret-left.svg" alt="Lower">
+                        </button>
+                        <span class="more-options-value" id="sub-pos-value">100%</span>
+                        <button class="more-options-arrow" data-dir="right">
+                            <img src="assets/icons/caret-right.svg" alt="Higher">
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="more-options-row text-sub-only" data-option="sub-color">
+                    <span class="more-options-label">Color</span>
+                    <div class="more-options-control">
+                        <button class="more-options-arrow" data-dir="left">
+                            <img src="assets/icons/caret-left.svg" alt="Previous">
+                        </button>
+                        <span class="more-options-value" id="sub-color-value">White</span>
+                        <button class="more-options-arrow" data-dir="right">
+                            <img src="assets/icons/caret-right.svg" alt="Next">
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="more-options-row text-sub-only" data-option="sub-back">
+                    <span class="more-options-label">Background</span>
+                    <div class="more-options-control">
+                        <button class="more-options-arrow" data-dir="left">
+                            <img src="assets/icons/caret-left.svg" alt="Previous">
+                        </button>
+                        <span class="more-options-value" id="sub-back-value">None</span>
+                        <button class="more-options-arrow" data-dir="right">
+                            <img src="assets/icons/caret-right.svg" alt="Next">
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="more-options-row" data-option="sub-delay">
+                    <span class="more-options-label">Offset</span>
+                    <div class="more-options-control">
+                        <button class="more-options-arrow" data-dir="left">
+                            <img src="assets/icons/caret-left.svg" alt="Earlier">
+                        </button>
+                        <span class="more-options-value" id="sub-delay-value">0ms</span>
+                        <button class="more-options-arrow" data-dir="right">
+                            <img src="assets/icons/caret-right.svg" alt="Later">
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Video Section -->
+            <div id="video-section" class="more-options-section">
+                <div class="more-options-section-header">Video</div>
+                
+                <div class="more-options-row" data-option="aspect">
+                    <span class="more-options-label">Aspect Ratio</span>
+                    <div class="more-options-control">
+                        <button class="more-options-arrow" data-dir="left">
+                            <img src="assets/icons/caret-left.svg" alt="Previous">
+                        </button>
+                        <span class="more-options-value" id="aspect-value">Auto</span>
+                        <button class="more-options-arrow" data-dir="right">
+                            <img src="assets/icons/caret-right.svg" alt="Next">
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="more-options-row" data-option="brightness">
+                    <span class="more-options-label">Brightness</span>
+                    <div class="more-options-control">
+                        <button class="more-options-arrow" data-dir="left">
+                            <img src="assets/icons/caret-left.svg" alt="Decrease">
+                        </button>
+                        <span class="more-options-value" id="brightness-value">0</span>
+                        <button class="more-options-arrow" data-dir="right">
+                            <img src="assets/icons/caret-right.svg" alt="Increase">
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="more-options-row" data-option="contrast">
+                    <span class="more-options-label">Contrast</span>
+                    <div class="more-options-control">
+                        <button class="more-options-arrow" data-dir="left">
+                            <img src="assets/icons/caret-left.svg" alt="Decrease">
+                        </button>
+                        <span class="more-options-value" id="contrast-value">0</span>
+                        <button class="more-options-arrow" data-dir="right">
+                            <img src="assets/icons/caret-right.svg" alt="Increase">
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="more-options-row" data-option="saturation">
+                    <span class="more-options-label">Saturation</span>
+                    <div class="more-options-control">
+                        <button class="more-options-arrow" data-dir="left">
+                            <img src="assets/icons/caret-left.svg" alt="Decrease">
+                        </button>
+                        <span class="more-options-value" id="saturation-value">0</span>
+                        <button class="more-options-arrow" data-dir="right">
+                            <img src="assets/icons/caret-right.svg" alt="Increase">
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="more-options-row" data-option="gamma">
+                    <span class="more-options-label">Gamma</span>
+                    <div class="more-options-control">
+                        <button class="more-options-arrow" data-dir="left">
+                            <img src="assets/icons/caret-left.svg" alt="Decrease">
+                        </button>
+                        <span class="more-options-value" id="gamma-value">0</span>
+                        <button class="more-options-arrow" data-dir="right">
+                            <img src="assets/icons/caret-right.svg" alt="Increase">
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Up Next Episode Modal -->
+    <div id="up-next-modal" class="up-next-modal up-next-hidden">
+        <div class="up-next-thumbnail-container">
+            <img id="up-next-thumbnail" class="up-next-thumbnail" src="" alt="Next">
+        </div>
+        <div class="up-next-content">
+            <div class="up-next-countdown">
+                <span id="up-next-label">Next Episode in </span><span id="up-next-timer" class="up-next-timer-accent">30s</span>
+            </div>
+            <div class="up-next-episode-info">
+                <div id="up-next-title" class="up-next-title">Episode Title</div>
+                <div class="up-next-meta">
+                    <span id="up-next-season-episode">S01 E02</span>
+                    <div class="up-next-meta-divider"></div>
+                    <span id="up-next-ends-at">Ends at 10:15</span>
+                </div>
+            </div>
+            <div class="up-next-buttons">
+                <button class="up-next-button focused" id="up-next-start-btn">
+                    <img src="assets/icons/play.svg" class="up-next-button-icon" alt="Play">
+                    <span class="up-next-button-text">Start Now</span>
+                </button>
+                <button class="up-next-button" id="up-next-hide-btn">
+                    <img src="assets/icons/remove-continuewatching.svg" class="up-next-button-icon" alt="Hide">
+                    <span class="up-next-button-text">Hide</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="osd-container" class="osd-hidden">
+        <!-- Background gradients - back inside container so they fade with OSD -->
+        <div class="osd-gradient-base"></div>
+        <div class="osd-gradient"></div>
+        <div class="osd-gradient-accent"></div>
+        
+        <!-- Top bar with clock (matching detail page) -->
+        <!-- Top bar with clock (matching detail page) -->
+        <div class="osd-top-bar">
+            <div class="osd-clock-container">
+                <span id="osd-clock">00:00</span>
+            </div>
+        </div>
+
+        <!-- Bottom bar with all controls -->
+        <div class="osd-bottom-bar">
+            <!-- Row 1: Movie info -->
+            <div class="osd-info">
+                <div class="osd-title" id="osd-title">Movie Title</div>
+                <div class="osd-meta" id="osd-meta">
+                    <!-- Metadata populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Row 2: Progress bar and times -->
+            <div class="osd-progress-container">
+                <div class="osd-progress-bar">
+                    <div class="osd-progress-filled" id="osd-progress-filled"></div>
+                    <div class="osd-progress-handle" id="osd-progress-handle"></div>
+                </div>
+                <div class="osd-time-row">
+                    <div class="osd-time-elapsed" id="osd-time-elapsed">0:00</div>
+                    <div class="osd-time-remaining" id="osd-time-remaining">-0:00</div>
+                </div>
+            </div>
+
+            <!-- Row 3: Control buttons -->
+            <div class="osd-controls-row">
+                <!-- Left side: Playback controls -->
+                <div class="osd-playback-controls">
+                    <button class="osd-button osd-hidden" id="osd-previous-btn">
+                        <img src="assets/icons/previous.svg" class="osd-button-icon" alt="Previous">
+                    </button>
+                    <button class="osd-button" id="osd-back-btn">
+                        <img src="assets/icons/back-10.svg" class="osd-button-icon" alt="Back 10s">
+                    </button>
+                    <button class="osd-button" id="osd-play-pause-btn">
+                        <img src="assets/icons/play.svg" class="osd-button-icon" id="osd-play-pause-icon" alt="Play/Pause">
+                    </button>
+                    <button class="osd-button" id="osd-forward-btn">
+                        <img src="assets/icons/forward-30.svg" class="osd-button-icon" alt="Forward 30s">
+                    </button>
+                    <button class="osd-button osd-hidden" id="osd-next-btn">
+                        <img src="assets/icons/next.svg" class="osd-button-icon" alt="Next">
+                    </button>
+                </div>
+
+                <!-- Right side: Settings buttons -->
+                <div class="osd-settings-controls">
+                    <button class="osd-button" id="osd-subtitles-btn">
+                        <img src="assets/icons/subtitles-off.svg" class="osd-button-icon" alt="Subtitles">
+                    </button>
+                    <button class="osd-button" id="osd-more-btn">
+                        <img src="assets/icons/more-options.svg" class="osd-button-icon" alt="More">
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden template for resolution badge -->
+        <span class="osd-resolution-badge" id="osd-resolution-template" style="display: none;">
+            <img src="assets/icons/hd.svg" class="osd-badge-icon" alt="">
+            <span class="osd-badge-text">1080p</span>
+        </span>
+    </div>
+
+    <script src="osd.js"></script>
+</body>
+</html>
