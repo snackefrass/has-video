@@ -49,6 +49,10 @@ let watchDataManager = null;
 let config = {};
 let currentlyPlayingVideoPath = null; // Track the video currently playing (for focus on return)
 
+// Shuffle mode state
+window.shuffleMode = false;
+window.shuffleQueue = []; // Pre-shuffled array of remaining episode objects
+
 // Home screen state
 let homeCarousels = []; // Array of carousel data
 let currentCarouselIndex = 0; // Which carousel is focused
@@ -781,7 +785,9 @@ function buildContinueWatchingCarousel() {
                             progress: item.percentage,
                             position: item.position,
                             duration: item.duration,
-                            isUpNext: item.isUpNext || false // Flag for "up next" episodes
+                            isUpNext: item.isUpNext || false,
+                            isShuffleQueue: item.isShuffleQueue || false,
+                            isShuffleActive: item.isShuffleActive || false
                         });
                         episodeFound = true;
                         break;
@@ -904,13 +910,11 @@ function refreshHomeCardsWatchStatus() {
         // Remove old badge and progress bar
         const oldBadge = imgContainer.querySelector('.watched-badge');
         const oldProgress = imgContainer.querySelector('.progress-bar');
-        const oldUpNext = imgContainer.querySelector('.up-next-badge');
         if (oldBadge) oldBadge.remove();
         if (oldProgress) oldProgress.remove();
-        if (oldUpNext) oldUpNext.remove();
         
         const ws = watchDataManager.getWatchStatus(videoPath);
-        const threshold = type === 'tv' ? 300 : 600;
+        const threshold = type === 'tv' ? 180 : 600;
         
         // Add watched badge if watched
         if (ws.watched) {
@@ -934,19 +938,6 @@ function refreshHomeCardsWatchStatus() {
             imgContainer.appendChild(progressBar);
         }
         
-        // Check if this is an "up next" item (no progress, not watched, but in active shows)
-        if (type === 'tv' && !ws.watched && ws.position === 0) {
-            const activeShows = watchDataManager.watchData._activeShows || {};
-            for (const [showPath, showData] of Object.entries(activeShows)) {
-                if (showData.nextEpisodePath === videoPath) {
-                    const upNextBadge = document.createElement('div');
-                    upNextBadge.className = 'up-next-badge';
-                    upNextBadge.textContent = 'UP NEXT';
-                    imgContainer.appendChild(upNextBadge);
-                    break;
-                }
-            }
-        }
     });
 }
 
@@ -1072,8 +1063,8 @@ function createHomeCard(item, carouselIndex, cardIndex) {
     // Show if position > 0 and there's meaningful progress
     if (item.progress && item.progress > 0 && item.position && item.duration) {
         const timeRemaining = item.duration - item.position;
-        // TV shows use 5 min threshold, movies use 10 min
-        const threshold = item.type === 'tv' ? 300 : 600;
+        // TV shows use 3 min threshold, movies use 10 min
+        const threshold = item.type === 'tv' ? 180 : 600;
         // Show progress bar if watched past threshold AND threshold remaining
         if (item.position >= threshold && timeRemaining > threshold) {
             const progressBar = document.createElement('div');
@@ -1086,12 +1077,12 @@ function createHomeCard(item, carouselIndex, cardIndex) {
         }
     }
     
-    // UP NEXT badge for episodes that haven't been started yet
-    if (item.isUpNext) {
-        const upNextBadge = document.createElement('div');
-        upNextBadge.className = 'up-next-badge';
-        upNextBadge.textContent = 'UP NEXT';
-        imgContainer.appendChild(upNextBadge);
+    // Shuffle indicator (top-left corner bug) for any episode in shuffle mode
+    if (item.isShuffleQueue || item.isShuffleActive) {
+        const shuffleIndicator = document.createElement('div');
+        shuffleIndicator.className = 'shuffle-indicator';
+        shuffleIndicator.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.9244 1.61402C19.4868 1.37969 20.1289 1.51091 20.56 1.93739L23.5595 4.93681C23.8407 5.218 24 5.59762 24 5.99598C24 6.39434 23.8407 6.77395 23.5595 7.05514L20.56 10.0546C20.1289 10.4857 19.4868 10.6123 18.9244 10.3779C18.362 10.1436 17.9965 9.59996 17.9965 8.9907V7.491H16.4968C16.0234 7.491 15.5782 7.71127 15.297 8.09088L13.3099 10.7482L11.4353 8.25022L12.8975 6.3006C13.7458 5.16645 15.0814 4.50096 16.4968 4.50096H17.9965V3.00125C17.9965 2.39668 18.362 1.84835 18.9244 1.61402ZM7.686 13.2508L9.56063 15.7488L8.09842 17.6984C7.25015 18.8325 5.91447 19.498 4.49912 19.498H1.49971C0.670182 19.498 0 18.8278 0 17.9983C0 17.1688 0.670182 16.4986 1.49971 16.4986H4.49912C4.97247 16.4986 5.41769 16.2783 5.69889 15.8987L7.686 13.2508ZM20.5554 22.0616C20.1242 22.4928 19.4821 22.6193 18.9197 22.385C18.3574 22.1506 17.9918 21.607 17.9918 20.9977V19.498H16.4921C15.0767 19.498 13.7411 18.8325 12.8928 17.6984L5.69889 8.10025C5.41769 7.72064 4.97247 7.50037 4.49912 7.50037H1.49971C0.670182 7.50037 0 6.83019 0 6.00066C0 5.17114 0.670182 4.50096 1.49971 4.50096H4.49912C5.91447 4.50096 7.25015 5.16645 8.09842 6.3006L15.297 15.8987C15.5782 16.2783 16.0234 16.4986 16.4968 16.4986H17.9965V14.9989C17.9965 14.3943 18.362 13.846 18.9244 13.6117C19.4868 13.3773 20.1289 13.5086 20.56 13.9351L23.5595 16.9345C23.8407 17.2157 24 17.5953 24 17.9936C24 18.392 23.8407 18.7716 23.5595 19.0528L20.56 22.0522L20.5554 22.0616Z" fill="white"/></svg>`;
+        imgContainer.appendChild(shuffleIndicator);
     }
     
     card.appendChild(imgContainer);
@@ -1121,23 +1112,23 @@ function createHomeCard(item, carouselIndex, cardIndex) {
 /**
  * Update which card is focused and update info section
  */
-function updateHomeFocus() {
+function updateHomeFocus(skipScroll = false) {
     // Remove focus from all cards
     document.querySelectorAll('.home-card').forEach(card => {
         card.classList.remove('focused');
     });
-    
+
     // Add focus to current card
     const currentCarousel = homeCarousels[currentCarouselIndex];
     if (!currentCarousel) return;
-    
+
     const grid = document.getElementById(`homeCarouselGrid-${currentCarouselIndex}`);
     if (!grid) return;
-    
+
     const cards = grid.querySelectorAll('.home-card');
     if (cards[currentCardIndex]) {
         cards[currentCardIndex].classList.add('focused');
-        scrollHomeCardIntoView(currentCarouselIndex, currentCardIndex);
+        if (!skipScroll) scrollHomeCardIntoView(currentCarouselIndex, currentCardIndex);
     }
     
     // Update info section
@@ -1376,16 +1367,89 @@ function handleHomeCardClick(item) {
     
     // Set flag so we return to home when closing detail
     localStorage.setItem('cameFromHome', 'true');
-    
+
+    const isContinueWatching = homeCarousels[currentCarouselIndex] &&
+        homeCarousels[currentCarouselIndex].title === 'Continue Watching';
+
     if (item.type === 'movie') {
-        // Go to movie detail
-        hideHomeScreen();
-        openDetail(item.data, false);
+        if (isContinueWatching) {
+            // Direct play from Continue Watching
+            isHomeActive = false;
+            window.playMovie(item.data.videoPath, item.position || 0, item.data.metadata);
+        } else {
+            // Go to movie detail
+            hideHomeScreen();
+            openDetail(item.data, false);
+        }
     } else if (item.type === 'tv') {
-        // Go to season detail with episode focused
-        hideHomeScreen();
-        const { show, season, episode } = item.data;
-        openSeasonDetailWithEpisode(show, season, episode);
+        if (item.isShuffleQueue || item.isShuffleActive) {
+            // Play directly in shuffle mode (don't open detail page)
+            const { show, season, episode } = item.data;
+            window.currentShow = show;
+            window.currentSeason = season;
+
+            const allEpisodes = [];
+            show.seasons.forEach(s => {
+                if (s.episodes) s.episodes.forEach(ep => allEpisodes.push(ep));
+            });
+
+            // Pool = unwatched episodes excluding the one we're about to play
+            let pool = allEpisodes.filter(ep => {
+                if (ep.videoPath === episode.videoPath) return false;
+                const ws = watchDataManager ? watchDataManager.getWatchStatus(ep.videoPath) : null;
+                return !ws || !ws.watched;
+            });
+
+            // If all others are watched, reset them and reshuffle
+            if (pool.length === 0) {
+                allEpisodes.forEach(ep => {
+                    if (ep.videoPath !== episode.videoPath && watchDataManager) {
+                        watchDataManager.markUnwatched(ep.videoPath);
+                    }
+                });
+                pool = allEpisodes.filter(ep => ep.videoPath !== episode.videoPath);
+            }
+
+            // Fisher-Yates shuffle
+            const shuffled = [...pool];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+
+            window.shuffleMode = true;
+            window.shuffleQueue = shuffled.slice(1);
+            window.pendingNextEpisodeData = shuffled.length > 0
+                ? buildShuffleNextEpisodeData(shuffled[0])
+                : null;
+            window.pendingNavButtons = { hasPrevious: false, hasNext: shuffled.length > 0 };
+
+            // Remember the next shuffle episode so playback-ended can advance
+            // Continue Watching only AFTER this episode is fully watched
+            window.pendingShuffleNextPath = shuffled.length > 0 ? shuffled[0].videoPath : null;
+
+            // Mark this episode as shuffle-active so CW retains the indicator if not fully watched
+            if (watchDataManager) watchDataManager.setShuffleActive(episode.videoPath);
+
+            isHomeActive = false;
+            const seasonEp = `S${season.number.toString().padStart(2, '0')} E${episode.episode.toString().padStart(2, '0')}`;
+            window.playTVEpisode(episode.videoPath, item.position || 0, show.title, seasonEp, episode.title);
+        } else if (isContinueWatching) {
+            // Direct play from Continue Watching (non-shuffle TV episode)
+            const { show, season, episode } = item.data;
+            window.currentShow = show;
+            window.currentSeason = season;
+            window.shuffleMode = false;
+            window.shuffleQueue = [];
+            isHomeActive = false;
+            const seasonEp = `S${season.number.toString().padStart(2, '0')} E${episode.episode.toString().padStart(2, '0')}`;
+            window.playTVEpisode(episode.videoPath, item.position || 0, show.title, seasonEp, episode.title);
+        } else {
+            // Go to season detail with episode focused
+            hideHomeScreen();
+            const { show, season, episode } = item.data;
+            openSeasonDetailWithEpisode(show, season, episode);
+        }
     }
 }
 
@@ -1504,6 +1568,15 @@ function handleHomeKeydown(e) {
     if (!currentCarousel) return false;
     
     switch (e.key) {
+        case 'h':
+        case 'H':
+            // Already on home screen, consume the key
+            return true;
+        case 'n':
+        case 'N':
+            // Enter side nav from home screen
+            enterHomeNavMode();
+            return true;
         case 'o':
         case 'O':
             // Open context menu
@@ -1511,7 +1584,7 @@ function handleHomeKeydown(e) {
                 window.showHomeContextMenu();
             }
             return true;
-            
+
         case 'ArrowLeft':
             if (currentCardIndex > 0) {
                 currentCardIndex--;
@@ -2749,7 +2822,7 @@ function openPlaylistDetail(playlist, initialFocus = null) {
             </button>`;
             html += `<button class="detail-button" data-action="info" data-btn-index="1">
                 <img src="assets/icons/info.svg" class="detail-button-icon" alt="">
-                <span class="detail-button-text">Info</span>
+                <span class="detail-button-text">Go to Detail</span>
             </button>`;
             html += `<button class="detail-button" data-action="reorder" data-btn-index="2">
                 <img src="assets/icons/reorder.svg" class="detail-button-icon" alt="">
@@ -2789,7 +2862,7 @@ function setupPlaylistDetailNavigation() {
         // Stop event from reaching other handlers
         e.stopPropagation();
         e.stopImmediatePropagation();
-        
+
         const playlist = window.currentPlaylist;
         if (!playlist) return;
         
@@ -2943,9 +3016,29 @@ function setupPlaylistDetailNavigation() {
                 e.preventDefault();
                 closePlaylistDetail();
                 break;
+            case 'h':
+            case 'H':
+                e.preventDefault();
+                closePlaylistDetail();
+                showHomeScreen();
+                break;
+            case 'n':
+            case 'N':
+                e.preventDefault();
+                if (window.keyboardNav) {
+                    window.playlistNavState = {
+                        section: window.playlistFocusSection,
+                        focusedIndex: window.playlistFocusedIndex,
+                        buttonIndex: window.playlistItemButtonIndex
+                    };
+                    window.keyboardNav.previousMode = 'playlist';
+                    document.removeEventListener('keydown', window.playlistDetailKeyHandler, true);
+                    window.keyboardNav.enterNavMode();
+                }
+                break;
         }
     };
-    
+
     document.addEventListener('keydown', window.playlistDetailKeyHandler, true);
 }
 
@@ -3053,7 +3146,7 @@ function movePlaylistItemVisually(fromIndex, toIndex) {
 /**
  * Update the visual focus state for playlist detail
  */
-function updatePlaylistDetailFocus() {
+function updatePlaylistDetailFocus(skipScroll = false) {
     const playlist = window.currentPlaylist;
     if (!playlist) return;
     
@@ -3117,39 +3210,41 @@ function updatePlaylistDetailFocus() {
             }
             
             // Vertical carousel scrolling - keep focused item in fixed position near top
-            const list = document.getElementById('playlistDetailList');
-            if (list) {
-                // Check if we need instant scroll (no animation)
-                const useInstantScroll = window.playlistInstantScroll;
-                if (useInstantScroll) {
-                    // Disable smooth scrolling temporarily
-                    list.style.scrollBehavior = 'auto';
-                    window.playlistInstantScroll = false;
-                }
-                
-                // We want the focused item to appear with the previous item fully visible above it
-                // Index 0: no scroll
-                // Index 1: no scroll (both items visible)
-                // Index 2+: scroll so previous item is at top, focused item below it
-                const items = document.querySelectorAll('.playlist-item');
-                const firstItem = items[0];
-                
-                if (focusedIndex <= 1) {
-                    // First two items - no scroll needed
-                    list.scrollTop = 0;
-                } else if (firstItem) {
-                    // For index 2+, scroll so the previous item is at the top
-                    const prevItem = items[focusedIndex - 1];
-                    const targetScrollTop = prevItem.offsetTop - firstItem.offsetTop;
-                    
-                    list.scrollTop = Math.max(0, targetScrollTop);
-                }
-                
-                // Re-enable smooth scrolling after instant scroll
-                if (useInstantScroll) {
-                    requestAnimationFrame(() => {
-                        list.style.scrollBehavior = '';
-                    });
+            if (!skipScroll) {
+                const list = document.getElementById('playlistDetailList');
+                if (list) {
+                    // Check if we need instant scroll (no animation)
+                    const useInstantScroll = window.playlistInstantScroll;
+                    if (useInstantScroll) {
+                        // Disable smooth scrolling temporarily
+                        list.style.scrollBehavior = 'auto';
+                        window.playlistInstantScroll = false;
+                    }
+
+                    // We want the focused item to appear with the previous item fully visible above it
+                    // Index 0: no scroll
+                    // Index 1: no scroll (both items visible)
+                    // Index 2+: scroll so previous item is at top, focused item below it
+                    const items = document.querySelectorAll('.playlist-item');
+                    const firstItem = items[0];
+
+                    if (focusedIndex <= 1) {
+                        // First two items - no scroll needed
+                        list.scrollTop = 0;
+                    } else if (firstItem) {
+                        // For index 2+, scroll so the previous item is at the top
+                        const prevItem = items[focusedIndex - 1];
+                        const targetScrollTop = prevItem.offsetTop - firstItem.offsetTop;
+
+                        list.scrollTop = Math.max(0, targetScrollTop);
+                    }
+
+                    // Re-enable smooth scrolling after instant scroll
+                    if (useInstantScroll) {
+                        requestAnimationFrame(() => {
+                            list.style.scrollBehavior = '';
+                        });
+                    }
                 }
             }
             
@@ -3499,9 +3594,6 @@ function showPlaylistMoreOptions() {
     });
     menuHtml += '</div>';
     
-    // Add backdrop
-    menuHtml = '<div class="context-menu-backdrop" id="playlistContextBackdrop"></div>' + menuHtml;
-    
     // Insert into DOM
     document.body.insertAdjacentHTML('beforeend', menuHtml);
     
@@ -3821,24 +3913,34 @@ function removePlaylistItem(index) {
         // If empty, go back to grid
         closePlaylistDetail();
     } else {
-        // Save current focus state
+        // Save current focus state and scroll position
         const savedSection = window.playlistFocusSection;
         const savedButtonIndex = window.playlistItemButtonIndex;
         let savedFocusIndex = window.playlistFocusedIndex;
-        
-        // Adjust focus index: stay at same index, or go to last item if index is now out of bounds
+        const list = document.getElementById('playlistDetailList');
+        const savedScrollTop = list ? list.scrollTop : 0;
+
+        // Adjust focus index: stay at same index, or go to last item if now out of bounds
         if (savedFocusIndex >= updatedPlaylist.items.length) {
             savedFocusIndex = updatedPlaylist.items.length - 1;
         }
-        
-        // Re-open playlist (this resets focus vars)
+
+        // Re-open playlist (rebuilds DOM and resets scroll)
         openPlaylistDetail(updatedPlaylist);
-        
-        // Restore focus to list section at the same/adjusted index
+
+        // Restore scroll instantly so the item below the removed one stays in the same position
+        const newList = document.getElementById('playlistDetailList');
+        if (newList) {
+            newList.style.scrollBehavior = 'auto';
+            newList.scrollTop = savedScrollTop;
+            requestAnimationFrame(() => { newList.style.scrollBehavior = ''; });
+        }
+
+        // Restore focus without scrolling
         window.playlistFocusSection = savedSection;
         window.playlistFocusedIndex = savedFocusIndex;
         window.playlistItemButtonIndex = savedButtonIndex;
-        updatePlaylistDetailFocus();
+        updatePlaylistDetailFocus(true);
     }
 }
 
@@ -4028,7 +4130,7 @@ function openTVShowDetail(show) {
     
     // Shuffle button
     html += `
-        <button class="detail-button" onclick="alert('Shuffle not yet implemented')">
+        <button class="detail-button" onclick="shufflePlay()">
             <img src="assets/icons/shuffle.svg" class="detail-button-icon" alt="">
             <span class="detail-button-text">Shuffle</span>
         </button>
@@ -4039,7 +4141,7 @@ function openTVShowDetail(show) {
     const watchIcon = allWatched ? 'unwatched' : 'watched';
     const watchText = allWatched ? 'Mark Unwatched' : 'Mark Watched';
     html += `
-        <button class="detail-button" onclick="alert('Mark watched not yet implemented')">
+        <button class="detail-button" onclick="handleTVShowDetailContextMenuAction('${allWatched ? 'unwatch-show-detail' : 'watch-show-detail'}')">
             <img src="assets/icons/${watchIcon}.svg" class="detail-button-icon" alt="">
             <span class="detail-button-text">${watchText}</span>
         </button>
@@ -4739,25 +4841,38 @@ window.playTVEpisode = function(videoPath, startPosition, showTitle, seasonEp, e
         videoPath: videoPath
     };
     
-    // Find next episode data for Up Next feature
-    const nextEpisodeData = findNextEpisode(videoPath);
-    if (nextEpisodeData) {
-        console.log('Next episode found:', nextEpisodeData.title);
-        // Store it globally so we can send it after OSD is created
-        window.pendingNextEpisodeData = nextEpisodeData;
-    } else {
-        window.pendingNextEpisodeData = null;
-        console.log('No next episode available');
+    // In shuffle mode, pendingNextEpisodeData and pendingNavButtons are set by shufflePlay()
+    // and should not be overwritten here.
+    if (!window.shuffleMode) {
+        // Playing outside shuffle mode — clear the shuffle-active flag so CW won't show indicator
+        if (watchDataManager) watchDataManager.clearShuffleActive(videoPath);
+
+        // If this show had an active shuffle session, clear it so normal CW takes over.
+        // This removes any stale shuffle episode from CW alongside the normal one.
+        if (watchDataManager && window.currentShow) {
+            const allPaths = window.currentShow.seasons.flatMap(s => s.episodes.map(e => e.videoPath));
+            watchDataManager.clearShowShuffleState(window.currentShow.showPath, allPaths);
+        }
+
+        // Find next episode data for Up Next feature
+        const nextEpisodeData = findNextEpisode(videoPath);
+        if (nextEpisodeData) {
+            console.log('Next episode found:', nextEpisodeData.title);
+            window.pendingNextEpisodeData = nextEpisodeData;
+        } else {
+            window.pendingNextEpisodeData = null;
+            console.log('No next episode available');
+        }
+
+        // Find previous episode for nav buttons
+        const prevEpisodeData = findPreviousEpisode(videoPath);
+
+        // Set up nav buttons for OSD
+        window.pendingNavButtons = {
+            hasPrevious: !!prevEpisodeData,
+            hasNext: !!nextEpisodeData
+        };
     }
-    
-    // Find previous episode for nav buttons
-    const prevEpisodeData = findPreviousEpisode(videoPath);
-    
-    // Set up nav buttons for OSD
-    window.pendingNavButtons = {
-        hasPrevious: !!prevEpisodeData,
-        hasNext: !!nextEpisodeData
-    };
     
     player.playMovie(videoPath, startPosition, metadata, window.watchDataManager);
 };
@@ -4980,6 +5095,73 @@ window.playFocusedEpisode = function() {
     } catch (err) {
         console.error('Error playing focused episode:', err);
     }
+};
+
+// Build the nextEpisodeData object format expected by the OSD from a raw episode object
+function buildShuffleNextEpisodeData(episode) {
+    return {
+        videoPath: episode.videoPath,
+        title: episode.title,
+        seasonNumber: episode.season,
+        episodeNumber: episode.episode,
+        runtime: episode.runtime || 30,
+        showTitle: window.currentShow.title,
+        showPath: window.currentShow.showPath,
+        accentColor: window.currentShow.accentColor || '#39ddd8'
+    };
+}
+
+// Play a random unwatched episode from the current TV show.
+// If all episodes are watched, resets them all first.
+// The Up Next modal will continue through the shuffle queue automatically.
+window.shufflePlay = function() {
+    if (!window.currentShow || !window.currentShow.seasons) return;
+
+    // Collect all episodes from all seasons
+    const allEpisodes = [];
+    window.currentShow.seasons.forEach(season => {
+        if (season.episodes) season.episodes.forEach(ep => allEpisodes.push(ep));
+    });
+    if (allEpisodes.length === 0) return;
+
+    // Filter to unwatched episodes only
+    let pool = allEpisodes.filter(ep => {
+        const ws = window.watchDataManager ? window.watchDataManager.getWatchStatus(ep.videoPath) : null;
+        return !ws || !ws.watched;
+    });
+
+    // If all episodes are watched, reset them all and use the full list
+    if (pool.length === 0) {
+        allEpisodes.forEach(ep => {
+            if (window.watchDataManager) window.watchDataManager.markUnwatched(ep.videoPath);
+        });
+        pool = allEpisodes;
+    }
+
+    // Fisher-Yates shuffle
+    const shuffled = [...pool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    // Set shuffle state — queue holds everything after the pre-queued next episode (index 1)
+    window.shuffleMode = true;
+    window.shuffleQueue = shuffled.slice(2);
+
+    // Pre-set the next episode for the Up Next modal.
+    // playTVEpisode() will skip overwriting these when shuffleMode is true.
+    window.pendingNextEpisodeData = shuffled.length > 1
+        ? buildShuffleNextEpisodeData(shuffled[1])
+        : null;
+    window.pendingNavButtons = { hasPrevious: false, hasNext: window.shuffleQueue.length > 0 };
+
+    // Play the first episode from the beginning (never resume for shuffle)
+    const ep = shuffled[0];
+    // Mark as shuffle-active so CW shows the indicator if the user exits early
+    if (window.watchDataManager) window.watchDataManager.setShuffleActive(ep.videoPath);
+    const seasonEp = `S${ep.season.toString().padStart(2, '0')} E${ep.episode.toString().padStart(2, '0')}`;
+    window.playTVEpisode(ep.videoPath, 0, window.currentShow.title, seasonEp, ep.title);
 };
 
 // Toggle watched status for the currently focused episode
@@ -5737,9 +5919,39 @@ function openDetail(movie, fromCarousel = false, isRefresh = false) {
     }
     
     // ========================================
+    // PLAYLIST CAROUSELS: One per playlist containing this movie
+    // ========================================
+
+    const moviePlaylists = playlistManager.getAll().filter(pl =>
+        pl.items.some(i => i.videoPath === movie.videoPath)
+    );
+
+    moviePlaylists.forEach(playlist => {
+        const playlistMovies = playlist.items
+            .filter(i => i.videoPath !== movie.videoPath)
+            .map(i => allMovies.find(m => m.videoPath === i.videoPath))
+            .filter(Boolean);
+
+        if (playlistMovies.length > 0) {
+            html += '<div class="detail-info-container detail-tag-container">';
+            html += '<div class="detail-section">';
+            html += `<h2 class="detail-section-title">Playlist: ${playlist.name}</h2>`;
+            html += '<div class="detail-tag-scroll-container">';
+            html += '<div class="detail-tag-grid">';
+
+            playlistMovies.forEach(pm => { html += renderMovieCard(pm); });
+
+            html += '</div>'; // End detail-tag-grid
+            html += '</div>'; // End detail-tag-scroll-container
+            html += '</div>'; // End detail-section
+            html += '</div>'; // End detail-tag-container
+        }
+    });
+
+    // ========================================
     // FOURTH CONTAINER: More Like This (if exists)
     // ========================================
-    
+
     if (recommendations.length > 0) {
         html += '<div class="detail-info-container detail-recommendations-container">';
         
@@ -6392,6 +6604,15 @@ window.toggleFavorite = function() {
 // Handle playback ended
 ipcRenderer.on('playback-ended', async (event, videoPath) => {
     console.log('Playback ended:', videoPath);
+
+    // Save shuffle context before clearing (needed for post-playback active show update)
+    const wasInShuffleFromHome = !!window.pendingShuffleNextPath;
+    const pendingShuffleNextPath = window.pendingShuffleNextPath || null;
+
+    // Clear shuffle state when the player closes
+    window.shuffleMode = false;
+    window.shuffleQueue = [];
+    window.pendingShuffleNextPath = null;
     
     // Refresh watch status for all movies
     if (watchDataManager) {
@@ -6686,8 +6907,9 @@ ipcRenderer.on('playback-ended', async (event, videoPath) => {
             }
         } else if (window.currentShow) {
             // Check if we're on show detail page (has season cards) or season detail page
-            const isShowDetailPage = document.querySelector('.tv-seasons-grid') !== null;
-            const isSeasonDetailPage = document.querySelector('.season-detail-wrapper') !== null;
+            // Must also check detailIsOpen — these DOM elements persist when hidden
+            const isShowDetailPage = detailIsOpen && document.querySelector('.tv-seasons-grid') !== null;
+            const isSeasonDetailPage = detailIsOpen && document.querySelector('.season-detail-wrapper') !== null;
             
             if (isShowDetailPage) {
                 // We're on the TV show detail page (overview with season cards)
@@ -6838,9 +7060,9 @@ ipcRenderer.on('playback-ended', async (event, videoPath) => {
             if (isTVEpisode) {
                 const episodeWs = watchDataManager.getWatchStatus(videoPath);
                 
-                // If under 5 minutes watched AND not watched - clear progress completely
-                if (episodeWs.position < 300 && !episodeWs.watched) {
-                    console.log('TV episode under 5 min watched, not marked watched - clearing');
+                // If under 3 minutes watched AND not watched - clear progress completely
+                if (episodeWs.position < 180 && !episodeWs.watched) {
+                    console.log('TV episode under 3 min watched, not marked watched - clearing');
                     watchDataManager.markUnwatched(videoPath);
                 }
             }
@@ -6917,9 +7139,40 @@ ipcRenderer.on('playback-ended', async (event, videoPath) => {
             });
             
             console.log('Episode cards updated in place');
-            
+
             // Update season card badges in the show detail page
             updateSeasonCardBadges();
+            } else {
+                // No detail page visible — came directly from home screen (e.g., shuffle Continue Watching)
+                const isTVEpisode = videoPath.includes('/Season ') || videoPath.includes('\\Season ');
+                if (isTVEpisode) {
+                    const episodeWs = watchDataManager.getWatchStatus(videoPath);
+                    if (episodeWs.position < 180 && !episodeWs.watched) {
+                        watchDataManager.markUnwatched(videoPath);
+                    }
+
+                    // If episode was watched and this was a shuffle-from-home play,
+                    // now advance Continue Watching to the next shuffle episode
+                    if (episodeWs.watched && wasInShuffleFromHome && window.currentShow) {
+                        for (const season of window.currentShow.seasons) {
+                            const ep = season.episodes.find(e => e.videoPath === videoPath);
+                            if (ep) {
+                                watchDataManager.updateActiveShow(
+                                    videoPath,
+                                    window.currentShow.showPath,
+                                    season.number,
+                                    ep.episode,
+                                    pendingShuffleNextPath,      // null if queue exhausted
+                                    !!pendingShuffleNextPath     // isShuffleQueue
+                                );
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (localStorage.getItem('cameFromHome') === 'true') {
+                    showHomeScreen(true);
+                }
             }
         } else if (window.returnToPlaylist) {
             // We need to return to a playlist after playback
@@ -6937,6 +7190,12 @@ ipcRenderer.on('playback-ended', async (event, videoPath) => {
                 });
             }
         } else {
+            // No detail page open and no current show — likely a movie played from home
+            if (localStorage.getItem('cameFromHome') === 'true') {
+                showHomeScreen(true);
+                return;
+            }
+
             console.log('Detail page is closed - re-rendering grid normally');
             // Detail page is closed, re-render grid normally
             const grid = document.getElementById('movieGrid');
@@ -7411,7 +7670,11 @@ ipcRenderer.on('episode-started', (event, episodeData) => {
     
     // Get the player module
     const player = require('./player.js');
-    
+
+    // episode-started means seamless auto-play took over — the episode-started handler
+    // now manages _activeShows correctly, so cancel any pending home-screen shuffle update
+    window.pendingShuffleNextPath = null;
+
     // Get the previous video path BEFORE stopping tracking (which clears it)
     const previousVideoPath = player.getCurrentVideoPath();
     console.log('Previous video path:', previousVideoPath);
@@ -7437,6 +7700,22 @@ ipcRenderer.on('episode-started', (event, episodeData) => {
                     const episode = season.episodes.find(ep => ep.videoPath === previousVideoPath);
                     if (episode) {
                         updateActiveShowTracking(previousVideoPath, show, season, true);
+
+                        // In shuffle mode, point _activeShows to the episode NOW starting.
+                        // While it plays, getContinueWatchingItems step 2's alreadyInProgress
+                        // check will block it from appearing as a second CW item alongside
+                        // the in-progress entry. It advances to the next queue item only after
+                        // the current episode is fully watched (next episode-started fires).
+                        if (window.shuffleMode) {
+                            watchDataManager.updateActiveShow(
+                                previousVideoPath,
+                                show.showPath,
+                                season.number,
+                                episode.episode,
+                                episodeData.videoPath,
+                                true // isShuffleQueue
+                            );
+                        }
                         break;
                     }
                 }
@@ -7449,12 +7728,18 @@ ipcRenderer.on('episode-started', (event, episodeData) => {
         // Clear any existing progress for the new episode (fresh start)
         // This prevents inheriting progress from the previous episode
         window.watchDataManager.clearPosition(episodeData.videoPath);
-        
+
+        // In shuffle mode, mark the new episode shuffle-active so CW shows the indicator
+        // if the user exits before it's fully watched
+        if (window.shuffleMode) {
+            window.watchDataManager.setShuffleActive(episodeData.videoPath);
+        }
+
         // Update player's current video path
         if (player.setCurrentVideoPath) {
             player.setCurrentVideoPath(episodeData.videoPath);
         }
-        
+
         // Start position tracking for the new episode
         if (player.startPositionTracking) {
             player.startPositionTracking(episodeData.videoPath, window.watchDataManager);
@@ -7511,12 +7796,22 @@ ipcRenderer.on('episode-started', (event, episodeData) => {
         }
         
         // Find and send the next episode data to OSD
-        const nextEpisodeData = findNextEpisode(episodeData.videoPath);
-        if (nextEpisodeData) {
-            console.log('Sending next-next episode data to OSD:', nextEpisodeData.title);
-            ipcRenderer.send('set-next-episode', nextEpisodeData);
+        if (window.shuffleMode) {
+            if (window.shuffleQueue.length > 0) {
+                const nextEp = window.shuffleQueue.shift();
+                ipcRenderer.send('set-next-episode', buildShuffleNextEpisodeData(nextEp));
+            } else {
+                // Queue exhausted — player will close naturally on EOF
+                ipcRenderer.send('set-next-episode', null);
+            }
         } else {
-            console.log('No more episodes after this one');
+            const nextEpisodeData = findNextEpisode(episodeData.videoPath);
+            if (nextEpisodeData) {
+                console.log('Sending next-next episode data to OSD:', nextEpisodeData.title);
+                ipcRenderer.send('set-next-episode', nextEpisodeData);
+            } else {
+                console.log('No more episodes after this one');
+            }
         }
     }
 });
@@ -9718,12 +10013,14 @@ window.showSeasonContextMenu = function() {
         });
     }
     
-    // Add to Continue Watching (only if episode is not already the next episode)
+    // Add to Continue Watching (only if episode is unwatched and not already the next episode)
     if (focusedEpisode) {
+        const episodeWatchStatus = watchDataManager.getWatchStatus(focusedEpisode.videoPath);
+        const isEpisodeWatched = episodeWatchStatus && episodeWatchStatus.watched;
         const activeShow = watchDataManager.getActiveShow(window.currentShow.showPath);
         const isAlreadyNext = activeShow && activeShow.nextEpisodePath === focusedEpisode.videoPath;
-        
-        if (!isAlreadyNext) {
+
+        if (!isEpisodeWatched && !isAlreadyNext) {
             options.push({
                 icon: 'assets/icons/continue-watching.svg',
                 label: 'Add to Continue Watching',
@@ -9950,6 +10247,13 @@ window.showHomeContextMenu = function() {
     
     // Continue Watching specific options
     if (isContinueWatching) {
+        // 0. Go to Detail
+        options.push({
+            icon: 'assets/icons/info.svg',
+            label: 'Go to Detail',
+            action: 'go-to-detail'
+        });
+
         // 1. Mark as Watched/Unwatched (FIRST for Continue Watching)
         options.push({
             icon: isWatched ? 'assets/icons/unwatched.svg' : 'assets/icons/watched.svg',
@@ -10014,8 +10318,35 @@ window.showHomeContextMenu = function() {
 
 function handleHomeContextMenuAction(action, item, videoPath) {
     const isTVEpisode = item.type === 'tv';
-    
+
     switch (action) {
+        case 'go-to-detail': {
+            // Save home state for return navigation
+            const scrollPositions = [];
+            homeCarousels.forEach((_, index) => {
+                const scrollContainer = document.getElementById(`homeCarouselScroll-${index}`);
+                scrollPositions.push(scrollContainer ? scrollContainer.scrollLeft : 0);
+            });
+            homeStateBeforeDetail = {
+                carouselIndex: currentCarouselIndex,
+                cardIndex: currentCardIndex,
+                videoPath: videoPath,
+                carouselId: homeCarousels[currentCarouselIndex] ? homeCarousels[currentCarouselIndex].id : null,
+                scrollPositions: scrollPositions
+            };
+            localStorage.setItem('cameFromHome', 'true');
+
+            if (item.type === 'movie') {
+                hideHomeScreen();
+                openDetail(item.data, false);
+            } else if (item.type === 'tv') {
+                const { show, season, episode } = item.data;
+                hideHomeScreen();
+                openSeasonDetailWithEpisode(show, season, episode);
+            }
+            break;
+        }
+
         case 'remove-continue-watching':
             // Exclude from Continue Watching (doesn't clear progress)
             watchDataManager.excludeFromContinueWatching(videoPath);
@@ -10030,9 +10361,9 @@ function handleHomeContextMenuAction(action, item, videoPath) {
                 currentCardIndex = Math.max(0, carousel.items.length - 1);
             }
             
-            updateHomeFocus();
+            updateHomeFocus(true);
             break;
-            
+
         case 'clear-progress':
             // Clear progress
             watchDataManager.clearPosition(videoPath);
@@ -10056,21 +10387,21 @@ function handleHomeContextMenuAction(action, item, videoPath) {
                         currentCardIndex = newIndex;
                     }
                 }
-                updateHomeFocus();
+                updateHomeFocus(true);
             } else {
                 // Movie: removes from Continue Watching (no progress = not shown)
                 buildHomeCarousels();
                 renderHomeCarousels();
-                
+
                 // Adjust index if needed
                 const movieCarousel = homeCarousels[currentCarouselIndex];
                 if (movieCarousel && currentCardIndex >= movieCarousel.items.length) {
                     currentCardIndex = Math.max(0, movieCarousel.items.length - 1);
                 }
-                updateHomeFocus();
+                updateHomeFocus(true);
             }
             break;
-            
+
         case 'mark-watched':
             watchDataManager.markWatched(videoPath);
             

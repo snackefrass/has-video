@@ -148,26 +148,33 @@ function startPositionTracking(videoPath, watchDataManager) {
 
 // Stop position tracking
 async function stopPositionTracking() {
+    // Capture and immediately clear module-level variables so any new tracking session
+    // that starts before this async function completes is not clobbered by our cleanup.
+    const localPath = trackedVideoPath;
+    const localManager = trackedWatchDataManager;
+    trackedVideoPath = null;
+    trackedWatchDataManager = null;
+
     // Clear the wait-for-socket interval if it's running
     if (positionTrackerWaitInterval) {
         clearInterval(positionTrackerWaitInterval);
         positionTrackerWaitInterval = null;
     }
-    
+
     if (positionTracker) {
         clearInterval(positionTracker);
         positionTracker = null;
-        
-        // Save position one final time before stopping
-        // Use module-level trackedVideoPath instead of currentMovie
-        if (trackedWatchDataManager && trackedVideoPath) {
+
+        // Save position one final time using local copies (not module vars, which may
+        // already belong to a new tracking session started via seamless auto-play)
+        if (localManager && localPath) {
             try {
                 const finalPos = await getPlaybackPosition();
                 if (finalPos && finalPos.position > 0 && finalPos.duration > 0) {
-                    trackedWatchDataManager.updatePosition(trackedVideoPath, finalPos.position, finalPos.duration);
+                    localManager.updatePosition(localPath, finalPos.position, finalPos.duration);
                     console.log('========================================');
                     console.log('FINAL POSITION SAVED ON EXIT');
-                    console.log(`Video: ${trackedVideoPath}`);
+                    console.log(`Video: ${localPath}`);
                     console.log(`Time: ${Math.floor(finalPos.position)}s / ${Math.floor(finalPos.duration)}s`);
                     console.log('========================================');
                 }
@@ -175,13 +182,9 @@ async function stopPositionTracking() {
                 console.log('Could not save final position (MPV may have already closed)');
             }
         }
-        
+
         console.log('Stopped position tracking');
     }
-    
-    // Clear tracked variables
-    trackedVideoPath = null;
-    trackedWatchDataManager = null;
 }
 
 // Play a movie

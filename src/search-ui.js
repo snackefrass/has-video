@@ -63,6 +63,23 @@ function setupKeyboardListeners() {
             case 'Backspace':
                 handleBack();
                 break;
+            case 'h':
+            case 'H':
+                window.location.href = 'index.html';
+                break;
+            case 'n':
+            case 'N':
+                if (currentMode === 'nav') {
+                    currentMode = 'keyboard';
+                    updateNavFocus();
+                    updateKeyboardFocus();
+                } else {
+                    currentMode = 'nav';
+                    navIndex = navItems.findIndex(item => item.classList.contains('nav-item-active'));
+                    if (navIndex < 0) navIndex = 0;
+                    updateNavFocus();
+                }
+                break;
         }
     });
 }

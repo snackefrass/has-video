@@ -86,28 +86,28 @@ class WatchDataManager {
         const isTVShow = videoPath.includes('/Season ') || videoPath.includes('\\Season ');
         
         if (isTVShow) {
-            // TV shows: only save position if within tracking window (5+ min watched AND 5+ min remaining)
+            // TV shows: only save position if within tracking window (3+ min watched AND 3+ min remaining)
             const timeRemaining = duration - position;
-            
-            if (position >= 300 && timeRemaining > 300) {
+
+            if (position >= 180 && timeRemaining > 180) {
                 // Within tracking window - save position
                 this.watchData[videoPath].position = position;
                 this.watchData[videoPath].duration = duration;
                 this.watchData[videoPath].lastWatched = new Date().toISOString();
-            } else if (position < 300) {
+            } else if (position < 180) {
                 // Before tracking window - clear position
                 this.watchData[videoPath].position = 0;
                 this.watchData[videoPath].duration = duration;
             } else {
-                // Near end (< 5 min remaining) - keep last saved position but don't update
+                // Near end (< 3 min remaining) - keep last saved position but don't update
                 this.watchData[videoPath].duration = duration;
             }
-            
-            // Auto-mark as watched if 5 minutes or less remaining
-            if (timeRemaining <= 300 && position >= 300) {
+
+            // Auto-mark as watched if 3 minutes or less remaining
+            if (timeRemaining <= 180 && position >= 180) {
                 this.watchData[videoPath].watched = true;
                 this.watchData[videoPath].position = 0; // Clear position when auto-marked
-                console.log('Auto-marking TV episode as watched (5 minutes or less remaining):', videoPath);
+                console.log('Auto-marking TV episode as watched (3 minutes or less remaining):', videoPath);
             }
         } else {
             // Movies: only save position if within tracking window (10+ min watched AND 10+ min remaining)
@@ -338,7 +338,8 @@ class WatchDataManager {
                         duration: data.duration,
                         percentage,
                         lastWatched: data.lastWatched,
-                        type: isTVShow ? 'tv' : 'movie'
+                        type: isTVShow ? 'tv' : 'movie',
+                        isShuffleActive: data.isShuffleActive || false
                     });
                 }
             }
@@ -361,7 +362,7 @@ class WatchDataManager {
                 // Only include if not already watched and not already in items (in-progress)
                 const alreadyInProgress = items.some(item => item.videoPath === showData.nextEpisodePath);
                 const isWatched = nextEpData && nextEpData.watched;
-                
+
                 if (!alreadyInProgress && !isWatched) {
                     items.push({
                         videoPath: showData.nextEpisodePath,
@@ -370,7 +371,8 @@ class WatchDataManager {
                         percentage: 0,
                         lastWatched: showData.lastWatched,
                         type: 'tv',
-                        isUpNext: true, // Flag to identify "up next" items
+                        isUpNext: true,
+                        isShuffleQueue: showData.isShuffleQueue || false,
                         showPath: showPath
                     });
                 }
@@ -391,11 +393,11 @@ class WatchDataManager {
      * @param {number} episodeNumber - Current episode number
      * @param {string} nextEpisodePath - Path to the next episode (or null if none)
      */
-    updateActiveShow(videoPath, showPath, seasonNumber, episodeNumber, nextEpisodePath) {
+    updateActiveShow(videoPath, showPath, seasonNumber, episodeNumber, nextEpisodePath, isShuffleQueue = false) {
         if (!this.watchData._activeShows) {
             this.watchData._activeShows = {};
         }
-        
+
         if (nextEpisodePath) {
             // There's a next episode - update active show tracking
             this.watchData._activeShows[showPath] = {
@@ -403,7 +405,8 @@ class WatchDataManager {
                 lastEpisodePath: videoPath,
                 lastSeasonNumber: seasonNumber,
                 lastEpisodeNumber: episodeNumber,
-                nextEpisodePath: nextEpisodePath
+                nextEpisodePath: nextEpisodePath,
+                isShuffleQueue: isShuffleQueue
             };
             console.log('Updated active show:', showPath, '- next episode:', nextEpisodePath);
         } else {
@@ -414,7 +417,55 @@ class WatchDataManager {
         
         this.saveWatchData();
     }
-    
+
+    /**
+     * Mark a video as currently playing in shuffle mode.
+     * Persists so that if the user exits mid-episode, CW shows the shuffle indicator.
+     * @param {string} videoPath
+     */
+    setShuffleActive(videoPath) {
+        if (!this.watchData[videoPath]) this.watchData[videoPath] = {};
+        this.watchData[videoPath].isShuffleActive = true;
+        this.saveWatchData();
+    }
+
+    /**
+     * When the user starts watching a show in normal (non-shuffle) mode, clear any
+     * lingering shuffle state so stale CW entries don't appear alongside the normal one.
+     * - Clears isShuffleActive + position on any shuffle-active episode of the show
+     * - Removes the show from _activeShows if it was in shuffle-queue mode
+     * @param {string} showPath
+     * @param {string[]} episodePaths - all video paths belonging to the show
+     */
+    clearShowShuffleState(showPath, episodePaths) {
+        let changed = false;
+        for (const videoPath of episodePaths) {
+            if (this.watchData[videoPath] && this.watchData[videoPath].isShuffleActive) {
+                delete this.watchData[videoPath].isShuffleActive;
+                this.watchData[videoPath].position = 0;
+                this.watchData[videoPath].percentage = 0;
+                changed = true;
+            }
+        }
+        if (this.watchData._activeShows && this.watchData._activeShows[showPath] &&
+                this.watchData._activeShows[showPath].isShuffleQueue) {
+            delete this.watchData._activeShows[showPath];
+            changed = true;
+        }
+        if (changed) this.saveWatchData();
+    }
+
+    /**
+     * Clear the shuffle-active flag (called when episode is played outside shuffle mode)
+     * @param {string} videoPath
+     */
+    clearShuffleActive(videoPath) {
+        if (this.watchData[videoPath] && this.watchData[videoPath].isShuffleActive) {
+            delete this.watchData[videoPath].isShuffleActive;
+            this.saveWatchData();
+        }
+    }
+
     /**
      * Get active show data
      * @param {string} showPath - Path to the show directory
@@ -472,7 +523,7 @@ class WatchDataManager {
             lastEpisodeNumber: lastEpisodeNumber,
             nextEpisodePath: episodePath
         };
-        
+
         this.saveWatchData();
         console.log('Manually added episode to Continue Watching:', episodePath);
     }
@@ -491,12 +542,30 @@ class WatchDataManager {
     removeFromContinueWatching(videoPath) {
         const isTVShow = videoPath.includes('/Season ') || videoPath.includes('\\Season ');
         
-        if (isTVShow && this.watchData._activeShows) {
-            // TV: Find and remove from any active show where this is the next episode
-            for (const [showPath, showData] of Object.entries(this.watchData._activeShows)) {
-                if (showData.nextEpisodePath === videoPath) {
-                    delete this.watchData._activeShows[showPath];
-                    console.log('Removed show from Continue Watching (active shows):', showPath);
+        if (isTVShow) {
+            // TV: Remove from active shows if this is the next episode
+            if (this.watchData._activeShows) {
+                for (const [showPath, showData] of Object.entries(this.watchData._activeShows)) {
+                    if (showData.nextEpisodePath === videoPath) {
+                        delete this.watchData._activeShows[showPath];
+                        console.log('Removed show from Continue Watching (active shows):', showPath);
+                    }
+                }
+            }
+            // Clear shuffle active flag if set
+            if (this.watchData[videoPath] && this.watchData[videoPath].isShuffleActive) {
+                delete this.watchData[videoPath].isShuffleActive;
+                console.log('Cleared shuffle active state for removed episode:', videoPath);
+            }
+            // If still in-progress (position > 0), add to exclusion list so step 1
+            // of getContinueWatchingItems skips it — same mechanism used for movies
+            if (this.watchData[videoPath] && this.watchData[videoPath].position > 0) {
+                if (!this.watchData._excludedFromContinueWatching) {
+                    this.watchData._excludedFromContinueWatching = [];
+                }
+                if (!this.watchData._excludedFromContinueWatching.includes(videoPath)) {
+                    this.watchData._excludedFromContinueWatching.push(videoPath);
+                    console.log('Added in-progress TV episode to exclusion list:', videoPath);
                 }
             }
             this.saveWatchData();

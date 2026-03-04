@@ -34,7 +34,7 @@
             
             <!-- Subtitles Section -->
             <div id="subtitles-section" class="more-options-section">
-                <div class="more-options-section-header">Subtitles</div>
+                <div class="more-options-section-header" data-option="reset-subtitles">Subtitles<button class="reset-defaults-btn" id="reset-subtitles-btn">Reset</button></div>
                 
                 <div class="more-options-row" data-option="sub-size">
                     <span class="more-options-label">Size</span>
@@ -101,10 +101,10 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Video Section -->
             <div id="video-section" class="more-options-section">
-                <div class="more-options-section-header">Video</div>
+                <div class="more-options-section-header" data-option="reset-video">Video<button class="reset-defaults-btn" id="reset-video-btn">Reset</button></div>
                 
                 <div class="more-options-row" data-option="aspect">
                     <span class="more-options-label">Aspect Ratio</span>
@@ -265,6 +265,9 @@
                 <div class="osd-settings-controls">
                     <button class="osd-button" id="osd-subtitles-btn">
                         <img src="assets/icons/subtitles-off.svg" class="osd-button-icon" alt="Subtitles">
+                    </button>
+                    <button class="osd-button" id="osd-info-btn">
+                        <img src="assets/icons/info.svg" class="osd-button-icon" alt="Info">
                     </button>
                     <button class="osd-button" id="osd-more-btn">
                         <img src="assets/icons/more-options.svg" class="osd-button-icon" alt="More">

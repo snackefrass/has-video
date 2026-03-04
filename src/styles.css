@@ -1061,13 +1061,6 @@ body.cursor-visible * {
     position: relative; /* Ensure normal flow positioning */
 }
 
-/* Carousel containers (collection, tags, recommendations) should be wider */
-.detail-collection-container,
-.detail-tag-container,
-.detail-recommendations-container {
-    width: 100% !important; /* Full width of viewport */
-}
-
 /* All containers after the first should have gap margin */
 .detail-content-track > .detail-info-container:not(:first-child) {
     margin-top: 17.78vh; /* 192px gap */
@@ -1079,25 +1072,22 @@ body.cursor-visible * {
 }
 
 /* Cast info container - content starts at top, extends to right edge */
-.detail-content-track > .detail-info-container:nth-child(2) {
-    width: auto; /* Override - extend to viewport edge */
-    padding-bottom: 0; /* Remove bottom padding to give more space for content */
+.detail-content-track > .detail-cast-info-container {
+    width: auto;
+    padding-bottom: 0;
     justify-content: flex-start;
 }
 
-/* Collection container (3rd) - content starts at top, extends to right edge */
-.detail-content-track > .detail-info-container:nth-child(3) {
-    width: auto; /* Override - extend to viewport edge */
+/* Carousel containers (collection, tags, playlist, recommendations) —
+   full width, consistent top padding, no bottom padding, regardless of position.
+   Selector uses .detail-content-track > to match base rule specificity (0,2,0)
+   so padding-bottom: 0 correctly overrides the base rule's 4.44vh. */
+.detail-content-track > .detail-collection-container,
+.detail-content-track > .detail-tag-container,
+.detail-content-track > .detail-recommendations-container {
+    width: 100% !important;
     padding-top: 4.44vh; /* 48px top padding */
-    padding-bottom: 0; /* Remove bottom padding */
-    justify-content: flex-start;
-}
-
-/* Recommendations container (4th) - content starts at top, extends to right edge */
-.detail-content-track > .detail-info-container:nth-child(4) {
-    width: auto; /* Override - extend to viewport edge */
-    padding-top: 4.44vh; /* 48px top padding */
-    padding-bottom: 0; /* Remove bottom padding */
+    padding-bottom: 0;
     justify-content: flex-start;
 }
 
@@ -2233,7 +2223,7 @@ body.cursor-visible * {
     font-weight: 700; /* Bold */
     font-stretch: 125%; /* Display width */
     font-size: 6.30vh; /* 68px - same as TV detail */
-    line-height: 5.74vh; /* 62px - increased by 2px from 60px */
+    line-height: 5.93vh; /* 64px */
     color: white;
     width: calc((var(--column-width) * 9) + (var(--gutter) * 8));
     margin: 0 0 2.22vh 0; /* 24px bottom - same as TV detail */
@@ -2248,7 +2238,7 @@ body.cursor-visible * {
     font-weight: 600; /* Semibold */
     font-stretch: 125%; /* Display width */
     font-size: 4.44vh; /* 48px */
-    line-height: 3.70vh; /* 40px */
+    line-height: 3.89vh; /* 42px */
     color: white;
     width: calc((var(--column-width) * 9) + (var(--gutter) * 8));
     margin: 0 0 2.22vh 0; /* 24px bottom */
@@ -2453,7 +2443,7 @@ body.cursor-visible * {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.95);
+    background: rgba(0, 0, 0, 0.90);
     display: none;
     align-items: center;
     justify-content: center;
@@ -2464,16 +2454,6 @@ body.cursor-visible * {
     display: flex;
 }
 
-/* Backdrop for context menus */
-.context-menu-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    z-index: 9999;
-}
 
 .context-menu {
     position: fixed;
@@ -2838,6 +2818,26 @@ body.cursor-visible * {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     z-index: 5;
+}
+
+/* Shuffle indicator on home cards — top-left corner bug (mirrors watched badge on the right) */
+.home-card .shuffle-indicator {
+    position: absolute;
+    top: 1.11vh;
+    left: 1.11vh;
+    width: 4.44vh;
+    height: 4.44vh;
+    background-color: #191a1a;
+    border-radius: 0.56vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+}
+
+.home-card .shuffle-indicator svg {
+    width: 2.22vh;
+    height: 2.22vh;
 }
 
 /* Card info */

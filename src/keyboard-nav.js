@@ -188,8 +188,21 @@ class KeyboardNavigation {
                     break;
                 case 'h':
                 case 'H':
-                    // Go home (clear search)
-                    this.goHome();
+                    // Go to home screen from anywhere
+                    if (window.showHomeScreen) {
+                        window.showHomeScreen();
+                    }
+                    break;
+                case 'n':
+                case 'N':
+                    // Focus side nav at current active item, or exit nav if already in it
+                    if (this.mode === 'nav') {
+                        this.exitNavMode();
+                    } else if (this.mode === 'detail') {
+                        this.enterNavModeFromDetail();
+                    } else {
+                        this.enterNavMode();
+                    }
                     break;
                 case 'f':
                 case 'F':
@@ -1900,7 +1913,6 @@ class KeyboardNavigation {
     tryEnterAlphabetMode() {
         // Check if we're at the rightmost column
         const columns = this.getColumnsCount();
-        const row = Math.floor(this.currentIndex / columns);
         const col = this.currentIndex % columns;
         
         // If at right edge, enter alphabet mode
@@ -1914,17 +1926,38 @@ class KeyboardNavigation {
     enterAlphabetMode() {
         // Save current grid position
         this.savedGridIndex = this.currentIndex;
-        
+
         this.mode = 'alphabet';
-        this.alphabetIndex = 0;
-        
+
         // Remove focus from grid items BEFORE focusing alphabet
         this.items.forEach(item => item.classList.remove('focused'));
-        
+
         this.updateAlphabetItems();
-        // Don't call focusAlphabetItem on entry - just add the class without scrolling
+
+        // Determine starting letter from the last item in the current row
+        const columns = this.getColumnsCount() || 1;
+        const currentRow = Math.floor(this.currentIndex / columns);
+        const lastInRow = Math.min((currentRow + 1) * columns - 1, this.items.length - 1);
+        const lastItem = this.items[lastInRow];
+
+        let startLetter = null;
+        if (lastItem) {
+            const titleSelector = window.currentLibrary === 'tv' ? '.tv-show-card-title' : '.movie-card-title';
+            const titleEl = lastItem.querySelector(titleSelector);
+            const title = titleEl?.getAttribute('data-sort-title') || titleEl?.textContent || '';
+            const firstChar = title.charAt(0).toUpperCase();
+            startLetter = firstChar.match(/[0-9]/) ? '#' : (firstChar.match(/[A-Z]/) ? firstChar : null);
+        }
+
+        // Find the matching alphabet item index, fall back to 0
+        const letterIndex = startLetter
+            ? this.alphabetItems.findIndex(item => item.dataset.letter === startLetter)
+            : -1;
+        this.alphabetIndex = letterIndex >= 0 ? letterIndex : 0;
+
         if (this.alphabetItems[this.alphabetIndex]) {
             this.alphabetItems[this.alphabetIndex].classList.add('focused');
+            this.alphabetItems[this.alphabetIndex].scrollIntoView({ behavior: 'auto', block: 'nearest' });
         }
     }
     
@@ -2075,7 +2108,15 @@ class KeyboardNavigation {
     enterNavMode() {
         // Save current grid position
         this.savedGridIndex = this.currentIndex;
-        
+
+        // Clear any stale previousMode unless we're genuinely coming from the home
+        // screen. enterHomeNavMode() sets previousMode='home' before calling here,
+        // but selecting a nav item from home never clears it — so without this check
+        // the first grid→nav→grid cycle would incorrectly take the home exit path.
+        if (!window.isHomeActive || !window.isHomeActive()) {
+            this.previousMode = null;
+        }
+
         this.mode = 'nav';
         
         // Find the active nav item instead of always starting at 0
@@ -2285,7 +2326,7 @@ class KeyboardNavigation {
         }
         this.updateItems(cardSelector);
         console.log('After updateItems - items.length:', this.items.length, 'currentIndex:', this.currentIndex, 'library:', window.currentLibrary);
-        
+
         // Focus on grid
         this.focusItem();
         console.log('After focusItem - focused card index:', this.currentIndex);

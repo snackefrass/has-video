@@ -51,6 +51,7 @@ const backBtn = document.getElementById('osd-back-btn');
 const forwardBtn = document.getElementById('osd-forward-btn');
 const previousBtn = document.getElementById('osd-previous-btn');
 const nextBtn = document.getElementById('osd-next-btn');
+const infoBtn = document.getElementById('osd-info-btn');
 const moreBtn = document.getElementById('osd-more-btn');
 
 // More Options panel elements
@@ -71,6 +72,7 @@ const gammaValue = document.getElementById('gamma-value');
 // More Options state
 let moreOptionsVisible = false;
 let moreOptionsFocusedRow = 0;
+let statsVisible = false;
 
 // Speed options
 const speedOptions = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -121,7 +123,7 @@ const upNextButtons = [upNextStartBtn, upNextHideBtn];
 
 // Button navigation
 let focusedButtonIndex = 1; // Start on play/pause (index 1 in visible buttons)
-const allButtons = [previousBtn, backBtn, playPauseBtn, forwardBtn, nextBtn, subtitlesBtn, moreBtn]; // All possible buttons
+const allButtons = [previousBtn, backBtn, playPauseBtn, forwardBtn, nextBtn, subtitlesBtn, infoBtn, moreBtn]; // All possible buttons
 let focusMode = 'buttons'; // 'scrubbar', 'buttons', or 'upnext'
 let isInitialShow = true; // Track if this is the first time OSD is shown
 
@@ -498,20 +500,23 @@ function showMoreOptions() {
 }
 
 function refreshMoreOptionsRows() {
-    // Re-query only visible rows
-    const allRows = document.querySelectorAll('.more-options-row');
     const visibleRows = [];
-    allRows.forEach(row => {
-        // Check if row is visible (not in a hidden section and not hidden itself)
-        const section = row.closest('.more-options-section');
-        const sectionHidden = section && section.classList.contains('hidden');
-        const rowHidden = row.classList.contains('hidden');
-        
-        if (!sectionHidden && !rowHidden) {
-            visibleRows.push(row);
+    Array.from(document.querySelector('.more-options-content').children).forEach(child => {
+        if (child.classList.contains('more-options-row') && !child.classList.contains('hidden')) {
+            // Direct row (Speed)
+            visibleRows.push(child);
+        } else if (child.classList.contains('more-options-section') && !child.classList.contains('hidden')) {
+            // Section header first if reset is available (matches visual position at top)
+            const header = child.querySelector('.more-options-section-header[data-option]');
+            if (header && header.classList.contains('reset-active')) {
+                visibleRows.push(header);
+            }
+            // Section rows
+            child.querySelectorAll('.more-options-row').forEach(row => {
+                if (!row.classList.contains('hidden')) visibleRows.push(row);
+            });
         }
     });
-    // Store as array for indexing
     window.visibleMoreOptionsRows = visibleRows;
 }
 
@@ -531,13 +536,14 @@ function toggleMoreOptions() {
 }
 
 function updateMoreOptionsFocus() {
-    const rows = window.visibleMoreOptionsRows || moreOptionsRows;
-    rows.forEach((row, index) => {
-        row.classList.remove('focused');
-        if (index === moreOptionsFocusedRow) {
-            row.classList.add('focused');
-        }
+    // Clear focused from all possible targets (rows + section headers)
+    document.querySelectorAll('.more-options-row.focused, .more-options-section-header.focused').forEach(el => {
+        el.classList.remove('focused');
     });
+    const rows = window.visibleMoreOptionsRows || moreOptionsRows;
+    if (rows[moreOptionsFocusedRow]) {
+        rows[moreOptionsFocusedRow].classList.add('focused');
+    }
 }
 
 function flashArrow(direction) {
@@ -690,6 +696,7 @@ function adjustOption(direction) {
             sendMPVCommand({ command: ['set_property', 'gamma', currentGamma] });
             break;
     }
+    updateResetButtons();
 }
 
 function handleMoreOptionsKey(e) {
@@ -719,10 +726,16 @@ function handleMoreOptionsKey(e) {
             adjustOption('right');
             break;
         case 'Enter':
-        case ' ':
+        case ' ': {
             e.preventDefault();
-            // Enter/Space does nothing now since left/right directly change values
+            const focusedItem = rows[moreOptionsFocusedRow];
+            if (focusedItem?.dataset.option === 'reset-subtitles') {
+                resetSubtitles();
+            } else if (focusedItem?.dataset.option === 'reset-video') {
+                resetVideo();
+            }
             break;
+        }
         case 'Escape':
         case 'Backspace':
             e.preventDefault();
@@ -769,14 +782,18 @@ function showOSD(startFocusMode = 'buttons') {
             // Subsequent shows - use provided mode (default buttons)
             focusMode = startFocusMode;
             if (focusMode === 'buttons') {
-                focusedButtonIndex = 1; // Reset to play/pause only when showing fresh
+                const visibleButtons = getVisibleButtons();
+                const playPauseIndex = visibleButtons.indexOf(playPauseBtn);
+                focusedButtonIndex = playPauseIndex >= 0 ? playPauseIndex : 0;
             }
         }
     } else if (startFocusMode !== focusMode) {
         // Switching modes while OSD is visible
         focusMode = startFocusMode;
         if (focusMode === 'buttons') {
-            focusedButtonIndex = 1; // Reset to play/pause when switching to buttons
+            const visibleButtons = getVisibleButtons();
+            const playPauseIndex = visibleButtons.indexOf(playPauseBtn);
+            focusedButtonIndex = playPauseIndex >= 0 ? playPauseIndex : 0;
         }
     }
     // If OSD is already visible and we're staying in the same mode, don't change focus
@@ -1059,6 +1076,121 @@ moreBtn.addEventListener('click', () => {
     toggleMoreOptions();
 });
 
+function toggleStats() {
+    statsVisible = !statsVisible;
+    infoBtn.classList.toggle('active', statsVisible);
+    sendMPVCommand({ command: ['script-binding', 'stats/display-stats-toggle'] });
+    if (statsVisible) {
+        // Ensure page 1 (File & Codec Info) is shown
+        sendMPVCommand({ command: ['script-message-to', 'stats', 'display-stats', '1'] });
+    }
+}
+
+function hideStats() {
+    if (!statsVisible) return;
+    statsVisible = false;
+    infoBtn.classList.remove('active');
+    sendMPVCommand({ command: ['script-binding', 'stats/display-stats-toggle'] });
+}
+
+infoBtn.addEventListener('click', () => {
+    toggleStats();
+});
+
+function isSubtitlesDirty() {
+    return currentSubSize !== 100 || currentSubPos !== 100 || currentSubDelay !== 0 ||
+           currentSubColorIndex !== 0 || currentSubBackIndex !== 0;
+}
+
+function isVideoDirty() {
+    return currentAspectIndex !== 0 || currentBrightness !== 0 || currentContrast !== 0 ||
+           currentSaturation !== 0 || currentGamma !== 0;
+}
+
+function updateResetButtons() {
+    // Remember which element is focused so we can restore after array changes
+    const focusedEl = (window.visibleMoreOptionsRows || [])[moreOptionsFocusedRow];
+
+    document.querySelector('#subtitles-section .more-options-section-header').classList.toggle('reset-active', isSubtitlesDirty());
+    document.querySelector('#video-section .more-options-section-header').classList.toggle('reset-active', isVideoDirty());
+
+    refreshMoreOptionsRows();
+
+    // Restore focus to the same element at its new index
+    const newIdx = focusedEl ? window.visibleMoreOptionsRows.indexOf(focusedEl) : -1;
+    if (newIdx >= 0) {
+        moreOptionsFocusedRow = newIdx;
+    } else if (moreOptionsFocusedRow >= window.visibleMoreOptionsRows.length) {
+        moreOptionsFocusedRow = window.visibleMoreOptionsRows.length - 1;
+    }
+    updateMoreOptionsFocus();
+}
+
+function resetSubtitles() {
+    currentSubSize = 100;
+    subSizeValue.textContent = '100%';
+    sendMPVCommand({ command: ['set_property', 'sub-scale', 1] });
+
+    currentSubPos = 100;
+    subPosValue.textContent = '100%';
+    sendMPVCommand({ command: ['set_property', 'sub-pos', 100] });
+
+    currentSubColorIndex = 0;
+    subColorValue.textContent = subColorOptions[0].name;
+    sendMPVCommand({ command: ['set_property', 'sub-color', subColorOptions[0].value] });
+
+    currentSubBackIndex = 0;
+    subBackValue.textContent = subBackOptions[0].name;
+    sendMPVCommand({ command: ['set_property', 'sub-back-color', subBackOptions[0].value] });
+
+    currentSubDelay = 0;
+    subDelayValue.textContent = '0ms';
+    sendMPVCommand({ command: ['set_property', 'sub-delay', 0] });
+
+    updateResetButtons();
+    // Focus first row of subtitles section
+    const firstSubRow = document.querySelector('#subtitles-section .more-options-row:not(.hidden)');
+    const subIdx = window.visibleMoreOptionsRows.indexOf(firstSubRow);
+    if (subIdx >= 0) {
+        moreOptionsFocusedRow = subIdx;
+        updateMoreOptionsFocus();
+    }
+}
+
+function resetVideo() {
+    currentAspectIndex = 0;
+    aspectValue.textContent = aspectOptions[0];
+    sendMPVCommand({ command: ['set_property', 'video-aspect-override', '0'] });
+
+    currentBrightness = 0;
+    brightnessValue.textContent = '0';
+    sendMPVCommand({ command: ['set_property', 'brightness', 0] });
+
+    currentContrast = 0;
+    contrastValue.textContent = '0';
+    sendMPVCommand({ command: ['set_property', 'contrast', 0] });
+
+    currentSaturation = 0;
+    saturationValue.textContent = '0';
+    sendMPVCommand({ command: ['set_property', 'saturation', 0] });
+
+    currentGamma = 0;
+    gammaValue.textContent = '0';
+    sendMPVCommand({ command: ['set_property', 'gamma', 0] });
+
+    updateResetButtons();
+    // Focus first row of video section
+    const firstVidRow = document.querySelector('#video-section .more-options-row:not(.hidden)');
+    const vidIdx = window.visibleMoreOptionsRows.indexOf(firstVidRow);
+    if (vidIdx >= 0) {
+        moreOptionsFocusedRow = vidIdx;
+        updateMoreOptionsFocus();
+    }
+}
+
+document.getElementById('reset-subtitles-btn').addEventListener('click', resetSubtitles);
+document.getElementById('reset-video-btn').addEventListener('click', resetVideo);
+
 // Mouse move shows OSD
 document.addEventListener('mousemove', () => {
     showOSD();
@@ -1108,10 +1240,14 @@ document.addEventListener('keydown', (e) => {
         return;
     }
     
-    // Escape or Backspace quits
+    // Escape or Backspace: dismiss stats first, then quit
     if (e.key === 'Escape' || e.key === 'Backspace') {
         e.preventDefault();
-        sendMPVCommand({ command: ['quit'] });
+        if (statsVisible) {
+            hideStats();
+        } else {
+            sendMPVCommand({ command: ['quit'] });
+        }
         return;
     }
     
