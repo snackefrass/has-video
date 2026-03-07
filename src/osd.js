@@ -13,6 +13,7 @@ let duration = 0;
 let isPaused = false;
 let subtitlesEnabled = false;
 let subtitlesAvailable = true; // Assume available until checked
+let currentSid = false; // Current subtitle track ID
 
 // Up Next state
 let upNextVisible = false;
@@ -91,6 +92,11 @@ let currentSubSize = 100; // percentage (sub-scale * 100)
 let currentSubPos = 100; // percentage (100 = bottom, lower = higher on screen)
 let currentSubDelay = 0; // milliseconds
 let subtitleIsText = true; // true for text-based subs (can change color/bg), false for bitmap
+
+// Subtitle picker state
+let subtitlePickerVisible = false;
+let subtitlePickerIndex = 0;
+let subtitlePickerTracks = [];
 
 const subColorOptions = [
     { name: 'White', value: '1.0/1.0/1.0/1.0' },
@@ -275,6 +281,12 @@ function handleMPVResponse(response) {
         window._subtitleTypeHandler(response);
         window._subtitleTypeHandler = null;
     }
+
+    // Handle subtitle picker track list (request_id 201)
+    if (response.request_id === 201 && window._subtitlePickerTrackHandler) {
+        window._subtitlePickerTrackHandler(response);
+        window._subtitlePickerTrackHandler = null;
+    }
     
     // Handle get_property responses for initial state
     if (response.request_id === 100 && response.data !== undefined) {
@@ -285,6 +297,7 @@ function handleMPVResponse(response) {
     if (response.request_id === 101 && response.data !== undefined) {
         console.log('Initial sid (subtitle track):', response.data);
         // sid is the track ID - false/no means no subs, number means subs enabled
+        currentSid = response.data;
         subtitlesEnabled = (response.data !== false && response.data !== 'no');
         updateSubtitlesButton();
     }
@@ -320,6 +333,7 @@ function handleMPVResponse(response) {
                 console.log('MPV sid (subtitle track) changed:', response.data);
                 if (response.data !== null) {
                     // sid is false/'no' when disabled, or a track number when enabled
+                    currentSid = response.data;
                     subtitlesEnabled = (response.data !== false && response.data !== 'no');
                     updateSubtitlesButton();
                 }
@@ -479,6 +493,232 @@ function showSubtitleToast(message) {
     toastTimeout = setTimeout(() => {
         subtitleToast.classList.remove('show');
     }, 2000);
+}
+
+// Subtitle Track Picker
+function getSubtitleTracksFromMPV() {
+    return new Promise((resolve) => {
+        const handleResponse = (response) => {
+            if (response.data) {
+                resolve(response.data.filter(t => t.type === 'sub'));
+            } else {
+                resolve([]);
+            }
+        };
+        window._subtitlePickerTrackHandler = handleResponse;
+        sendMPVCommand({ command: ['get_property', 'track-list'], request_id: 201 });
+        setTimeout(() => {
+            window._subtitlePickerTrackHandler = null;
+            resolve([]);
+        }, 1000);
+    });
+}
+
+const LANG_NAMES = {
+    af: 'Afrikaans', sq: 'Albanian', ar: 'Arabic', hy: 'Armenian', az: 'Azerbaijani',
+    eu: 'Basque', be: 'Belarusian', bn: 'Bengali', bs: 'Bosnian', bg: 'Bulgarian',
+    ca: 'Catalan', zh: 'Chinese', hr: 'Croatian', cs: 'Czech', da: 'Danish',
+    nl: 'Dutch', en: 'English', et: 'Estonian', fi: 'Finnish', fr: 'French',
+    gl: 'Galician', ka: 'Georgian', de: 'German', el: 'Greek', gu: 'Gujarati',
+    he: 'Hebrew', hi: 'Hindi', hu: 'Hungarian', is: 'Icelandic', id: 'Indonesian',
+    ga: 'Irish', it: 'Italian', ja: 'Japanese', kn: 'Kannada', kk: 'Kazakh',
+    ko: 'Korean', lv: 'Latvian', lt: 'Lithuanian', mk: 'Macedonian', ms: 'Malay',
+    ml: 'Malayalam', mt: 'Maltese', mr: 'Marathi', mn: 'Mongolian', ne: 'Nepali',
+    nb: 'Norwegian', fa: 'Persian', pl: 'Polish', pt: 'Portuguese', pa: 'Punjabi',
+    ro: 'Romanian', ru: 'Russian', sr: 'Serbian', sk: 'Slovak', sl: 'Slovenian',
+    es: 'Spanish', sw: 'Swahili', sv: 'Swedish', ta: 'Tamil', te: 'Telugu',
+    th: 'Thai', tr: 'Turkish', uk: 'Ukrainian', ur: 'Urdu', uz: 'Uzbek',
+    vi: 'Vietnamese', cy: 'Welsh',
+    // ISO 639-2 (3-letter)
+    afr: 'Afrikaans', alb: 'Albanian', ara: 'Arabic', arm: 'Armenian', aze: 'Azerbaijani',
+    baq: 'Basque', bel: 'Belarusian', ben: 'Bengali', bos: 'Bosnian', bul: 'Bulgarian',
+    cat: 'Catalan', chi: 'Chinese', zho: 'Chinese', hrv: 'Croatian', cze: 'Czech',
+    ces: 'Czech', dan: 'Danish', dut: 'Dutch', nld: 'Dutch', eng: 'English',
+    est: 'Estonian', fin: 'Finnish', fre: 'French', fra: 'French', glg: 'Galician',
+    geo: 'Georgian', kat: 'Georgian', ger: 'German', deu: 'German', gre: 'Greek',
+    ell: 'Greek', guj: 'Gujarati', heb: 'Hebrew', hin: 'Hindi', hun: 'Hungarian',
+    ice: 'Icelandic', isl: 'Icelandic', ind: 'Indonesian', gle: 'Irish', ita: 'Italian',
+    jpn: 'Japanese', kan: 'Kannada', kaz: 'Kazakh', kor: 'Korean', lav: 'Latvian',
+    lit: 'Lithuanian', mac: 'Macedonian', mkd: 'Macedonian', may: 'Malay', msa: 'Malay',
+    mal: 'Malayalam', mlt: 'Maltese', mar: 'Marathi', mon: 'Mongolian', nep: 'Nepali',
+    nor: 'Norwegian', nob: 'Norwegian', per: 'Persian', fas: 'Persian', pol: 'Polish',
+    por: 'Portuguese', pan: 'Punjabi', rum: 'Romanian', ron: 'Romanian', rus: 'Russian',
+    srp: 'Serbian', slo: 'Slovak', slk: 'Slovak', slv: 'Slovenian', spa: 'Spanish',
+    swa: 'Swahili', swe: 'Swedish', tam: 'Tamil', tel: 'Telugu', tha: 'Thai',
+    tur: 'Turkish', ukr: 'Ukrainian', urd: 'Urdu', uzb: 'Uzbek', vie: 'Vietnamese',
+    wel: 'Welsh', cym: 'Welsh',
+};
+
+function buildTrackLabel(t) {
+    if (t.title) return t.title;
+    if (t.lang && t.lang !== 'und') {
+        return LANG_NAMES[t.lang.toLowerCase()] || t.lang.toUpperCase();
+    }
+    return `Track ${t.id}`;
+}
+
+async function handleSubtitleAction() {
+    // Toggle picker closed if already open
+    if (subtitlePickerVisible) {
+        hideSubtitlePicker();
+        return;
+    }
+
+    const tracks = await getSubtitleTracksFromMPV();
+
+    if (tracks.length === 0) {
+        showSubtitleToast('No Subtitles Found');
+        return;
+    }
+
+    if (tracks.length === 1) {
+        // Single track — simple toggle
+        sendMPVCommand({ command: ['cycle', 'sub'] });
+        showSubtitleToast(subtitlesEnabled ? 'Subtitles Off' : 'Subtitles On');
+        return;
+    }
+
+    // Multiple tracks — show picker
+    showOSD('buttons');
+    showSubtitlePicker(tracks);
+}
+
+async function cycleSubtitleTrack() {
+    const tracks = await getSubtitleTracksFromMPV();
+
+    if (tracks.length === 0) {
+        showSubtitleToast('No Subtitles Found');
+        return;
+    }
+
+    if (tracks.length === 1) {
+        sendMPVCommand({ command: ['cycle', 'sub'] });
+        showSubtitleToast(subtitlesEnabled ? 'Subtitles Off' : 'Subtitles On');
+        return;
+    }
+
+    // Build ordered list: Off, track1, track2, ...
+    const options = [{ id: 'no', label: 'Off' }, ...tracks.map(t => ({ id: t.id, label: buildTrackLabel(t) }))];
+    const currentIndex = options.findIndex(o =>
+        o.id === 'no' ? !subtitlesEnabled : (subtitlesEnabled && String(currentSid) === String(o.id))
+    );
+    const nextIndex = (currentIndex + 1) % options.length;
+    const next = options[nextIndex];
+
+    if (next.id === 'no') {
+        sendMPVCommand({ command: ['set_property', 'sid', 'no'] });
+        showSubtitleToast('Subtitles Off');
+    } else {
+        sendMPVCommand({ command: ['set_property', 'sid', next.id] });
+        showSubtitleToast(next.label);
+    }
+}
+
+function showSubtitlePicker(tracks) {
+    if (moreOptionsVisible) hideMoreOptions();
+
+    // Build item list: Off + each track
+    subtitlePickerTracks = [
+        { id: 'no', label: 'Off' },
+        ...tracks.map(t => ({ id: t.id, label: buildTrackLabel(t) }))
+    ];
+
+    // Render items
+    const list = document.getElementById('subtitle-picker-list');
+    list.innerHTML = '';
+    subtitlePickerTracks.forEach((track, idx) => {
+        const item = document.createElement('div');
+        item.className = 'subtitle-picker-item';
+
+        const isSelected = track.id === 'no'
+            ? !subtitlesEnabled
+            : (subtitlesEnabled && String(currentSid) === String(track.id));
+        if (isSelected) {
+            item.classList.add('selected');
+            subtitlePickerIndex = idx;
+        }
+
+        const label = document.createElement('span');
+        label.textContent = track.label;
+
+        const check = document.createElement('img');
+        check.src = 'assets/icons/check.svg';
+        check.className = 'subtitle-picker-check';
+        check.alt = '';
+
+        item.appendChild(label);
+        item.appendChild(check);
+        item.addEventListener('click', () => selectSubtitleTrack(track.id));
+        list.appendChild(item);
+    });
+
+    // Position above the subtitle button
+    const rect = subtitlesBtn.getBoundingClientRect();
+    const pickerEl = document.getElementById('subtitle-picker');
+    pickerEl.style.bottom = (window.innerHeight - rect.top + 16) + 'px';
+    pickerEl.style.right = (window.innerWidth - rect.right) + 'px';
+
+    subtitlePickerVisible = true;
+    pickerEl.classList.remove('subtitle-picker-hidden');
+    updateSubtitlePickerFocus();
+
+    // Keep OSD visible while picker is open
+    clearTimeout(hideTimeout);
+}
+
+function hideSubtitlePicker() {
+    subtitlePickerVisible = false;
+    document.getElementById('subtitle-picker').classList.add('subtitle-picker-hidden');
+    resetHideTimer();
+}
+
+function updateSubtitlePickerFocus() {
+    document.querySelectorAll('.subtitle-picker-item').forEach((item, i) => {
+        item.classList.toggle('focused', i === subtitlePickerIndex);
+    });
+}
+
+function selectSubtitleTrack(id) {
+    if (id === 'no') {
+        sendMPVCommand({ command: ['set_property', 'sid', 'no'] });
+        showSubtitleToast('Subtitles Off');
+    } else {
+        sendMPVCommand({ command: ['set_property', 'sid', id] });
+        const track = subtitlePickerTracks.find(t => t.id === id);
+        showSubtitleToast(track ? track.label : 'Subtitles On');
+    }
+    hideSubtitlePicker();
+}
+
+function handleSubtitlePickerKey(e) {
+    switch (e.key) {
+        case 'ArrowUp':
+            e.preventDefault();
+            if (subtitlePickerIndex > 0) {
+                subtitlePickerIndex--;
+                updateSubtitlePickerFocus();
+            }
+            break;
+        case 'ArrowDown':
+            e.preventDefault();
+            if (subtitlePickerIndex < subtitlePickerTracks.length - 1) {
+                subtitlePickerIndex++;
+                updateSubtitlePickerFocus();
+            }
+            break;
+        case 'Enter':
+        case ' ':
+            e.preventDefault();
+            selectSubtitleTrack(subtitlePickerTracks[subtitlePickerIndex].id);
+            break;
+        case 'Escape':
+        case 'Backspace':
+        case 's':
+        case 'S':
+            e.preventDefault();
+            hideSubtitlePicker();
+            break;
+    }
 }
 
 // More Options Panel functions
@@ -829,6 +1069,7 @@ function showOSD(startFocusMode = 'buttons') {
 
 // Hide OSD
 function hideOSD() {
+    if (subtitlePickerVisible) return;
     osdContainer.classList.add('osd-hidden');
     // Remove all focus when hiding
     buttons.forEach(btn => btn.classList.remove('active'));
@@ -1085,17 +1326,8 @@ function playItemSeamlessly(itemData) {
     }
 }
 
-subtitlesBtn.addEventListener('click', async () => {
-    const exists = await checkSubtitlesExist();
-    if (!exists) {
-        showSubtitleToast('No Subtitles Found');
-        showOSD();
-        return;
-    }
-    
-    // Toggle subtitles
-    showSubtitleToast(subtitlesEnabled ? 'Subtitles Off' : 'Subtitles On');
-    sendMPVCommand({ command: ['cycle', 'sub'] });
+subtitlesBtn.addEventListener('click', () => {
+    handleSubtitleAction();
     showOSD();
 });
 
@@ -1231,6 +1463,12 @@ document.addEventListener('mousemove', () => {
 document.addEventListener('keydown', (e) => {
     const osdVisible = !osdContainer.classList.contains('osd-hidden');
     
+    // Handle Subtitle Picker keyboard navigation first
+    if (subtitlePickerVisible) {
+        handleSubtitlePickerKey(e);
+        return;
+    }
+
     // Handle More Options panel keyboard navigation first
     if (moreOptionsVisible) {
         handleMoreOptionsKey(e);
@@ -1319,18 +1557,7 @@ document.addEventListener('keydown', (e) => {
                 case 's':
                 case 'S':
                     e.preventDefault();
-                    checkSubtitlesExist().then(exists => {
-                        if (!exists) {
-                            showSubtitleToast('No Subtitles Found');
-                            resetHideTimer();
-                            return;
-                        }
-                        // Toggle subtitles
-                        
-                        showSubtitleToast(subtitlesEnabled ? 'Subtitles Off' : 'Subtitles On');
-                        sendMPVCommand({ command: ['cycle', 'sub'] });
-                        resetHideTimer();
-                    });
+                    cycleSubtitleTrack().then(() => resetHideTimer());
                     return;
             }
         } else {
@@ -1359,18 +1586,7 @@ document.addEventListener('keydown', (e) => {
                 case 's':
                 case 'S':
                     e.preventDefault();
-                    checkSubtitlesExist().then(exists => {
-                        if (!exists) {
-                            showSubtitleToast('No Subtitles Found');
-                            resetHideTimer();
-                            return;
-                        }
-                        // Toggle subtitles
-                        
-                        showSubtitleToast(subtitlesEnabled ? 'Subtitles Off' : 'Subtitles On');
-                        sendMPVCommand({ command: ['cycle', 'sub'] });
-                        resetHideTimer();
-                    });
+                    cycleSubtitleTrack().then(() => resetHideTimer());
                     return;
             }
         }
@@ -1404,17 +1620,7 @@ document.addEventListener('keydown', (e) => {
             case 's':
             case 'S':
                 e.preventDefault();
-                checkSubtitlesExist().then(exists => {
-                    if (!exists) {
-                        showSubtitleToast('No Subtitles Found');
-                        return;
-                    }
-                    // Toggle subtitles
-                    
-                    sendMPVCommand({ command: ['cycle', 'sub'] });
-                    showSubtitleToast(subtitlesEnabled ? 'Subtitles Off' : 'Subtitles On');
-                    // Don't show OSD on subtitle toggle
-                });
+                cycleSubtitleTrack();
                 break;
         }
     }
