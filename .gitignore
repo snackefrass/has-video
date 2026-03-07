@@ -10,10 +10,12 @@ build/
 config.json
 watch-data.json
 playlists.json
+package-lock.json
 
 # Logs
 *.log
 npm-debug.log*
+nohup.out
 
 # Electron build cache
 .cache/

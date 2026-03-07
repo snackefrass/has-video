@@ -314,7 +314,7 @@ class WatchDataManager {
         // 1. Get in-progress items (including watched movies with saved position)
         for (const [videoPath, data] of Object.entries(this.watchData)) {
             // Skip special keys
-            if (videoPath === '_activeShows' || videoPath === '_excludedFromContinueWatching') continue;
+            if (videoPath === '_activeShows' || videoPath === '_excludedFromContinueWatching' || videoPath === '_favorites' || videoPath === '_quickLaunchShows') continue;
             
             // Skip excluded items
             if (excludedItems.includes(videoPath)) continue;
@@ -615,6 +615,80 @@ class WatchDataManager {
     isExcludedFromContinueWatching(videoPath) {
         const excluded = this.watchData._excludedFromContinueWatching || [];
         return excluded.includes(videoPath);
+    }
+
+    // ========================================
+    // Favorites (movies only)
+    // ========================================
+
+    _ensureFavorites() {
+        if (!this.watchData._favorites) {
+            this.watchData._favorites = { movies: [] };
+        }
+    }
+
+    addFavoriteMovie(videoPath) {
+        this._ensureFavorites();
+        if (!this.watchData._favorites.movies.includes(videoPath)) {
+            this.watchData._favorites.movies.push(videoPath);
+            this.saveWatchData();
+        }
+    }
+
+    removeFavoriteMovie(videoPath) {
+        this._ensureFavorites();
+        const idx = this.watchData._favorites.movies.indexOf(videoPath);
+        if (idx !== -1) {
+            this.watchData._favorites.movies.splice(idx, 1);
+            this.saveWatchData();
+        }
+    }
+
+    isFavoriteMovie(videoPath) {
+        this._ensureFavorites();
+        return this.watchData._favorites.movies.includes(videoPath);
+    }
+
+    getFavoriteMoviePaths() {
+        this._ensureFavorites();
+        return this.watchData._favorites.movies;
+    }
+
+    // ========================================
+    // Quickplay (TV shows)
+    // ========================================
+
+    _ensureQuickplay() {
+        if (!this.watchData._quickLaunchShows) {
+            this.watchData._quickLaunchShows = [];
+        }
+    }
+
+    addQuickplayShow(showPath) {
+        this._ensureQuickplay();
+        if (!this.watchData._quickLaunchShows.includes(showPath)) {
+            this.watchData._quickLaunchShows.push(showPath);
+            this.saveWatchData();
+        }
+    }
+
+    removeQuickplayShow(showPath) {
+        this._ensureQuickplay();
+        const idx = this.watchData._quickLaunchShows.indexOf(showPath);
+        if (idx !== -1) {
+            this.watchData._quickLaunchShows.splice(idx, 1);
+            this.saveWatchData();
+        }
+    }
+
+    isQuickplayShow(showPath) {
+        this._ensureQuickplay();
+        return this.watchData._quickLaunchShows.includes(showPath);
+    }
+
+    getQuickplayShowPaths() {
+        this._ensureQuickplay();
+        return this.watchData._quickLaunchShows;
     }
 }
 

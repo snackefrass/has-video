@@ -180,6 +180,42 @@
     height: 15vw; /* Proportional height */
 }
 
+/* Scale badges proportionally to the smaller search result cards (75% of grid card size) */
+.results-grid .watched-badge {
+    width: 3.33vh;
+    height: 3.33vh;
+    top: 0.83vh;
+    right: 0.83vh;
+    border-radius: 0.42vh;
+}
+.results-grid .watched-badge svg {
+    width: 1.67vh;
+    height: 1.67vh;
+}
+.results-grid .favorites-badge {
+    width: 3.33vh;
+    height: 3.33vh;
+    top: 0.83vh;
+    left: 0.83vh;
+    border-radius: 0.42vh;
+}
+.results-grid .favorites-badge svg {
+    width: 1.67vh;
+    height: 1.67vh;
+}
+.results-grid .progress-bar {
+    bottom: 1.67vh;
+    left: 1.67vh;
+    right: 1.67vh;
+    height: 1.25vh;
+    padding: 0.21vh;
+    border-radius: 0.28vh;
+}
+.results-grid .progress-bar-fill {
+    height: 0.83vh;
+    border-radius: 0.14vh;
+}
+
 /* Empty state */
 .results-empty {
     font-family: 'Degular', sans-serif;

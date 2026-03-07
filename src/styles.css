@@ -50,6 +50,10 @@
     /* Detail page colors */
     --detail-text-primary: #ffffff;
     --detail-text-info: #cccccc;
+
+    /* Favorites */
+    --favorites: #FD9FCE;
+    --favorites-rgb: 253, 159, 206;
 }
 
 body {
@@ -122,6 +126,23 @@ body.cursor-visible * {
     align-items: center;
 }
 
+/* Top bar left group: logo + grid page title */
+.top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: var(--offset); /* 24px between logo and title */
+}
+
+/* Grid page title */
+.grid-page-title {
+    font-family: 'Degular', sans-serif;
+    font-size: 2.22vh; /* 24px */
+    font-variation-settings: 'wght' 400;
+    color: var(--text-primary);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
 /* Side Navigation */
 .side-nav {
     grid-area: nav;
@@ -138,6 +159,27 @@ body.cursor-visible * {
 
 .side-nav.expanded {
     width: var(--nav-expanded-width);
+}
+
+/* Overlay shown behind nav when it's expanded */
+.nav-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 90; /* Below nav (100) but above content */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.nav-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .nav-items-top {
@@ -3696,4 +3738,154 @@ body.cursor-visible * {
     font-family: 'Degular', sans-serif;
     font-size: 1.67vh;
     color: var(--text-primary);
+}
+
+/* ============================================
+   Favorites View
+   ============================================ */
+
+#favoritesView {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.favorites-view {
+    display: flex;
+    flex-direction: column;
+    gap: 3vh;
+}
+
+.favorites-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2vh;
+}
+
+.favorites-section-title {
+    font-family: 'Degular', sans-serif;
+    font-size: 2.2vh;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.favorites-carousel-track {
+    display: flex;
+    flex-direction: row;
+    gap: var(--gutter);
+    overflow-x: auto;
+    padding-bottom: 1vh;
+    scrollbar-width: none;
+}
+
+.favorites-carousel-track::-webkit-scrollbar {
+    display: none;
+}
+
+.favorites-empty {
+    font-family: 'Degular', sans-serif;
+    font-size: 1.8vh;
+    color: var(--text-secondary);
+    padding: 4vh var(--offset);
+}
+
+/* Favorites badge — left side of poster, same shape as watched-badge */
+.favorites-badge {
+    position: absolute;
+    top: 1.11vh;
+    left: 1.11vh;
+    width: 4.44vh;
+    height: 4.44vh;
+    background-color: #191a1a;
+    border-radius: 0.56vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.favorites-badge svg {
+    width: 2.22vh;
+    height: 2.22vh;
+}
+
+.favorites-badge svg path {
+    fill: var(--favorites);
+}
+
+/* Favorites badge - Detail page (larger, matches detail watched-badge) */
+.detail-poster-container .favorites-badge {
+    top: 1.11vh;
+    left: 1.11vh;
+    width: 8.89vh;
+    height: 8.89vh;
+    border-radius: 1.11vh;
+}
+
+.detail-poster-container .favorites-badge svg {
+    width: 4.44vh;
+    height: 4.44vh;
+}
+
+/* Favorites badge - Playlist poster (same size as detail) */
+.playlist-poster-favorites-badge {
+    position: absolute;
+    top: 1.11vh;
+    left: 1.11vh;
+    width: 8.89vh;
+    height: 8.89vh;
+    background-color: #191a1a;
+    border-radius: 1.11vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.playlist-poster-favorites-badge svg {
+    width: 4.44vh;
+    height: 4.44vh;
+}
+
+.playlist-poster-favorites-badge svg path {
+    fill: var(--favorites);
+}
+
+/* Quickplay shuffle badge — left side of TV show card poster */
+.quickplay-shuffle-badge {
+    position: absolute;
+    top: 1.11vh;
+    left: 1.11vh;
+    width: 4.44vh;
+    height: 4.44vh;
+    background-color: #191a1a;
+    border-radius: 0.56vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.quickplay-shuffle-badge svg {
+    width: 2.22vh;
+    height: 2.22vh;
+}
+
+/* When multi-select is active, push favorites badge right to clear the checkbox */
+.multi-select-mode .favorites-badge {
+    left: calc(1.11vh + 4.44vh + 4px);
+}
+
+/* View All Favorites home card */
+.home-card-view-all-image {
+    cursor: pointer;
+}
+
+.home-card-view-all-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+}
+
+.home-card-view-all-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }

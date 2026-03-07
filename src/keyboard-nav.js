@@ -189,6 +189,15 @@ class KeyboardNavigation {
                 case 'h':
                 case 'H':
                     // Go to home screen from anywhere
+                    if (this.mode === 'nav') {
+                        // Collapse nav before going home
+                        const navH = document.getElementById('sideNav');
+                        navH.classList.remove('expanded');
+                        document.getElementById('navOverlay').classList.remove('visible');
+                        this.navItems.forEach(item => item.classList.remove('focused'));
+                        this.mode = 'grid';
+                        this.previousMode = null;
+                    }
                     if (window.showHomeScreen) {
                         window.showHomeScreen();
                     }
@@ -297,21 +306,21 @@ class KeyboardNavigation {
     focusItem() {
         // Remove focus from all items
         this.items.forEach(item => item.classList.remove('focused'));
-        
+
         console.log('focusItem called - currentIndex:', this.currentIndex, 'items.length:', this.items.length);
-        
+
         // Add focus to current item
         if (this.items[this.currentIndex]) {
             const item = this.items[this.currentIndex];
             item.classList.add('focused');
-            
+
             // Track last episode index when focusing episodes
             if (this.mode === 'detail' && this.detailSubMode === 'episodes') {
                 this.lastEpisodeIndex = this.currentIndex;
             }
-            
+
             console.log('Focusing item at index', this.currentIndex, 'scrolling into view');
-            
+
             // Only scroll into view for grid mode, not detail mode
             if (this.mode !== 'detail') {
                 item.scrollIntoView({
@@ -1898,6 +1907,12 @@ class KeyboardNavigation {
         } else if (activePage === 'playlists') {
             console.log('Returning to playlists grid');
             this.updateItems('.playlist-card');
+        } else if (activePage === 'quickplay') {
+            console.log('Returning to Quickplay grid');
+            this.updateItems('.quickplay-card');
+        } else if (activePage === 'favorites') {
+            console.log('Returning to Favorites grid');
+            this.updateItems('.favorites-card');
         } else {
             console.log('Returning to movie grid');
             this.updateItems('.movie-card');
@@ -2129,6 +2144,7 @@ class KeyboardNavigation {
         // Expand nav
         const nav = document.getElementById('sideNav');
         nav.classList.add('expanded');
+        document.getElementById('navOverlay').classList.add('visible');
         
         // Remove focus from grid items
         this.items.forEach(item => item.classList.remove('focused'));
@@ -2157,6 +2173,7 @@ class KeyboardNavigation {
         // Expand nav
         const nav = document.getElementById('sideNav');
         nav.classList.add('expanded');
+        document.getElementById('navOverlay').classList.add('visible');
         
         // Remove focus from detail buttons
         this.items.forEach(item => item.classList.remove('focused'));
@@ -2172,6 +2189,7 @@ class KeyboardNavigation {
             // Collapse nav
             const nav = document.getElementById('sideNav');
             nav.classList.remove('expanded');
+            document.getElementById('navOverlay').classList.remove('visible');
             
             // Remove focus from nav items
             this.navItems.forEach(item => item.classList.remove('focused'));
@@ -2191,6 +2209,7 @@ class KeyboardNavigation {
             // Collapse nav
             const nav = document.getElementById('sideNav');
             nav.classList.remove('expanded');
+            document.getElementById('navOverlay').classList.remove('visible');
             
             // Remove focus from nav items
             this.navItems.forEach(item => item.classList.remove('focused'));
@@ -2259,6 +2278,7 @@ class KeyboardNavigation {
             // Collapse nav
             const nav = document.getElementById('sideNav');
             nav.classList.remove('expanded');
+            document.getElementById('navOverlay').classList.remove('visible');
             
             // Remove focus from nav items
             this.navItems.forEach(item => item.classList.remove('focused'));
@@ -2288,7 +2308,8 @@ class KeyboardNavigation {
         // Collapse nav
         const nav = document.getElementById('sideNav');
         nav.classList.remove('expanded');
-        
+        document.getElementById('navOverlay').classList.remove('visible');
+
         // Remove focus from nav items
         this.navItems.forEach(item => item.classList.remove('focused'));
         
@@ -2311,7 +2332,7 @@ class KeyboardNavigation {
             cardSelector = '.tv-show-card';
         } else if (window.currentLibrary === 'playlists') {
             cardSelector = '.playlist-card';
-            
+
             // Check for empty playlist state
             const emptyState = document.querySelector('.playlist-empty-state');
             if (emptyState) {
@@ -2321,10 +2342,13 @@ class KeyboardNavigation {
                 }
                 return;
             }
+        } else if (window.currentLibrary === 'favorites') {
+            // Scope to favoritesView to avoid picking up hidden movieGrid cards
+            this.items = Array.from(document.querySelectorAll('#favoritesView .movie-card'));
         } else {
             cardSelector = '.movie-card';
         }
-        this.updateItems(cardSelector);
+        if (cardSelector) this.updateItems(cardSelector);
         console.log('After updateItems - items.length:', this.items.length, 'currentIndex:', this.currentIndex, 'library:', window.currentLibrary);
 
         // Focus on grid
@@ -2362,6 +2386,7 @@ class KeyboardNavigation {
     
     selectNavItem() {
         if (this.navItems[this.navIndex]) {
+            document.getElementById('navOverlay').classList.remove('visible');
             this.navItems[this.navIndex].click();
         }
     }

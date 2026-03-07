@@ -5,7 +5,7 @@ const { ipcRenderer } = require('electron');
 
 // State
 let currentMode = 'settings'; // 'nav', 'settings', 'color-picker'
-let navIndex = 4; // Start at Settings nav item
+let navIndex = 7; // Start at Settings nav item
 let settingsIndex = 0; // Current settings item
 let colorSwatchIndex = 0; // Current color swatch
 let navItems = [];
@@ -20,6 +20,9 @@ let settingsSubSize = 100;
 let settingsSubPos = 100;
 let settingsSubColorIndex = 0;
 let settingsSubBackIndex = 0;
+
+// Playback settings state
+let settingsOsdDuration = 3;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
@@ -136,6 +139,11 @@ function loadSettingsIntoForm() {
     if (subPosEl) subPosEl.textContent = settingsSubPos + '%';
     if (subColorEl) subColorEl.textContent = subColorOptions[settingsSubColorIndex] || 'White';
     if (subBackEl) subBackEl.textContent = subBackOptions[settingsSubBackIndex] || 'None';
+
+    // Load OSD duration
+    settingsOsdDuration = parseInt(localStorage.getItem('osdDuration') || '3', 10);
+    const osdDurationEl = document.getElementById('settings-osd-duration');
+    if (osdDurationEl) osdDurationEl.textContent = settingsOsdDuration + 's';
     
     // Load gradient settings
     loadGradientSettings();
@@ -430,6 +438,16 @@ function adjustSubtitleSetting(item, direction) {
     }
     
     switch (setting) {
+        case 'osd-duration':
+            if (direction === 'left' && settingsOsdDuration > 1) {
+                settingsOsdDuration -= 1;
+            } else if (direction === 'right' && settingsOsdDuration < 10) {
+                settingsOsdDuration += 1;
+            }
+            document.getElementById('settings-osd-duration').textContent = settingsOsdDuration + 's';
+            localStorage.setItem('osdDuration', settingsOsdDuration);
+            break;
+
         case 'sub-size':
             if (direction === 'left' && settingsSubSize > 50) {
                 settingsSubSize -= 10;
@@ -569,12 +587,15 @@ function handleBack() {
 
 function updateNavFocus() {
     const sideNav = document.querySelector('.side-nav');
-    
+    const overlay = document.getElementById('navOverlay');
+
     // Expand nav when in nav mode
     if (currentMode === 'nav') {
         sideNav.classList.add('expanded');
+        if (overlay) overlay.classList.add('visible');
     } else {
         sideNav.classList.remove('expanded');
+        if (overlay) overlay.classList.remove('visible');
     }
     
     navItems.forEach((item, i) => {

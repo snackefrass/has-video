@@ -10,6 +10,7 @@
     <div id="app">
         <!-- Top Bar -->
         <header class="top-bar">
+            <div class="top-bar-left">
             <div class="top-bar-logo">
                 <svg class="logo-image" width="116" height="42" viewBox="0 0 116 42" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <g clip-path="url(#clip0_513_4305)">
@@ -23,6 +24,8 @@
                     </defs>
                 </svg>
             </div>
+            <div class="grid-page-title" id="gridPageTitle" style="display: none;"></div>
+            </div>
             <div class="top-bar-time" id="topBarTime">00:00</div>
         </header>
 
@@ -34,6 +37,12 @@
                         <path class="nav-icon-path" d="M19.5 9.75C19.5 11.9016 18.8016 13.8891 17.625 15.5016L23.5594 21.4406C24.1453 22.0266 24.1453 22.9781 23.5594 23.5641C22.9734 24.15 22.0219 24.15 21.4359 23.5641L15.5016 17.625C13.8891 18.8062 11.9016 19.5 9.75 19.5C4.36406 19.5 0 15.1359 0 9.75C0 4.36406 4.36406 0 9.75 0C15.1359 0 19.5 4.36406 19.5 9.75ZM9.75 16.5C10.6364 16.5 11.5142 16.3254 12.3331 15.9862C13.1521 15.647 13.8962 15.1498 14.523 14.523C15.1498 13.8962 15.647 13.1521 15.9862 12.3331C16.3254 11.5142 16.5 10.6364 16.5 9.75C16.5 8.86358 16.3254 7.98583 15.9862 7.16689C15.647 6.34794 15.1498 5.60382 14.523 4.97703C13.8962 4.35023 13.1521 3.85303 12.3331 3.51381C11.5142 3.17459 10.6364 3 9.75 3C8.86358 3 7.98583 3.17459 7.16689 3.51381C6.34794 3.85303 5.60382 4.35023 4.97703 4.97703C4.35023 5.60382 3.85303 6.34794 3.51381 7.16689C3.17459 7.98583 3 8.86358 3 9.75C3 10.6364 3.17459 11.5142 3.51381 12.3331C3.85303 13.1521 4.35023 13.8962 4.97703 14.523C5.60382 15.1498 6.34794 15.647 7.16689 15.9862C7.98583 16.3254 8.86358 16.5 9.75 16.5Z" fill="white"/>
                     </svg>
                     <span class="nav-label">Search</span>
+                </div>
+                <div class="nav-item" data-page="quickplay">
+                    <svg class="nav-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path class="nav-icon-path" d="M17.8781 2.09098C18.1546 1.44881 17.9484 0.698837 17.3812 0.286351C16.8141 -0.126134 16.0406 -0.0886353 15.511 0.370724L3.5114 10.8704C3.04266 11.2828 2.87392 11.9438 3.09422 12.525C3.31453 13.1062 3.87701 13.4999 4.50043 13.4999H9.7268L6.12224 21.909C5.84569 22.5512 6.05193 23.3012 6.6191 23.7136C7.18627 24.1261 7.95968 24.0886 8.48935 23.6293L20.4889 13.1296C20.9577 12.7172 21.1264 12.0562 20.9061 11.475C20.6858 10.8938 20.128 10.5047 19.4999 10.5047H14.2735L17.8781 2.09098Z" fill="white"/>
+                    </svg>
+                    <span class="nav-label">Quickplay</span>
                 </div>
                 <div class="nav-item nav-item-active" data-page="home">
                     <svg class="nav-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -66,6 +75,12 @@
                     </svg>
                     <span class="nav-label">Playlists</span>
                 </div>
+                <div class="nav-item" data-page="favorites">
+                    <svg class="nav-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path class="nav-icon-path" d="M2.23125 13.8433L10.7016 21.7512C11.0531 22.0793 11.5172 22.2621 12 22.2621C12.4828 22.2621 12.9469 22.0793 13.2984 21.7512L21.7687 13.8433C23.1937 12.5168 24 10.6558 24 8.71053V8.43865C24 5.16209 21.6328 2.36834 18.4031 1.82928C16.2656 1.47303 14.0906 2.17147 12.5625 3.69959L12 4.26209L11.4375 3.69959C9.90938 2.17147 7.73438 1.47303 5.59688 1.82928C2.36719 2.36834 0 5.16209 0 8.43865V8.71053C0 10.6558 0.80625 12.5168 2.23125 13.8433Z" fill="white"/>
+                    </svg>
+                    <span class="nav-label">Favorites</span>
+                </div>
             </div>
             <div class="nav-items-bottom">
                 <div class="nav-item" data-page="settings">
@@ -76,6 +91,9 @@
                 </div>
             </div>
         </nav>
+
+        <!-- Nav overlay — shown when nav is expanded -->
+        <div id="navOverlay" class="nav-overlay" onclick="window.keyboardNav && window.keyboardNav.exitNavMode()"></div>
 
         <!-- Main Content Area -->
         <main class="content-area" id="contentArea">
@@ -135,6 +153,16 @@
                 <!-- Playlists Grid -->
                 <div id="playlistGrid" class="movie-grid" style="display: none;">
                     <!-- Playlists will be inserted here -->
+                </div>
+
+                <!-- Favorites View -->
+                <div id="favoritesView" style="display: none;">
+                    <!-- Favorites content rendered dynamically -->
+                </div>
+
+                <!-- Quickplay View -->
+                <div id="quickplayView" style="display: none;">
+                    <!-- Quickplay content rendered dynamically -->
                 </div>
 
                 <!-- Alphabet Navigation -->

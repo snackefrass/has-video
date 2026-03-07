@@ -69,6 +69,14 @@ const contrastValue = document.getElementById('contrast-value');
 const saturationValue = document.getElementById('saturation-value');
 const gammaValue = document.getElementById('gamma-value');
 
+// Config-based defaults for reset (populated on playback start)
+let subtitleConfigDefaults = {
+    size: 100,
+    position: 100,
+    colorIndex: 0,
+    backgroundIndex: 0
+};
+
 // More Options state
 let moreOptionsVisible = false;
 let moreOptionsFocusedRow = 0;
@@ -342,27 +350,35 @@ function applySubtitleDefaults() {
         const defaults = ipcRenderer.sendSync('get-subtitle-defaults');
         if (defaults) {
             console.log('Applying subtitle defaults:', defaults);
-            
+
+            // Store config defaults so reset can return to these values
+            subtitleConfigDefaults = {
+                size: defaults.size || 100,
+                position: defaults.position || 100,
+                colorIndex: defaults.colorIndex || 0,
+                backgroundIndex: defaults.backgroundIndex || 0
+            };
+
             // Apply size
-            currentSubSize = defaults.size || 100;
+            currentSubSize = subtitleConfigDefaults.size;
             subSizeValue.textContent = currentSubSize + '%';
             sendMPVCommand({ command: ['set_property', 'sub-scale', currentSubSize / 100] });
-            
+
             // Apply position
-            currentSubPos = defaults.position || 100;
+            currentSubPos = subtitleConfigDefaults.position;
             subPosValue.textContent = currentSubPos + '%';
             sendMPVCommand({ command: ['set_property', 'sub-pos', currentSubPos] });
-            
+
             // Apply color (only for text subs)
             if (subtitleIsText) {
-                currentSubColorIndex = defaults.colorIndex || 0;
+                currentSubColorIndex = subtitleConfigDefaults.colorIndex;
                 if (currentSubColorIndex < subColorOptions.length) {
                     subColorValue.textContent = subColorOptions[currentSubColorIndex].name;
                     sendMPVCommand({ command: ['set_property', 'sub-color', subColorOptions[currentSubColorIndex].value] });
                 }
-                
+
                 // Apply background
-                currentSubBackIndex = defaults.backgroundIndex || 0;
+                currentSubBackIndex = subtitleConfigDefaults.backgroundIndex;
                 if (currentSubBackIndex < subBackOptions.length) {
                     subBackValue.textContent = subBackOptions[currentSubBackIndex].name;
                     sendMPVCommand({ command: ['set_property', 'sub-back-color', subBackOptions[currentSubBackIndex].value] });
@@ -469,6 +485,11 @@ function showSubtitleToast(message) {
 function showMoreOptions() {
     moreOptionsVisible = true;
     moreOptionsPanel.classList.remove('more-options-hidden');
+
+    // Show moreBtn as active while panel is open
+    allButtons.forEach(btn => btn?.classList.remove('active'));
+    progressHandle.classList.remove('active');
+    moreBtn.classList.add('active');
     
     // Hide/show subtitle section based on availability
     const subtitlesSection = document.getElementById('subtitles-section');
@@ -523,7 +544,9 @@ function refreshMoreOptionsRows() {
 function hideMoreOptions() {
     moreOptionsVisible = false;
     moreOptionsPanel.classList.add('more-options-hidden');
-    // Resume normal OSD behavior
+    // Restore button focus state and resume normal OSD behavior
+    moreBtn.classList.remove('active');
+    updateButtonFocus();
     resetHideTimer();
 }
 
@@ -621,7 +644,7 @@ function adjustOption(direction) {
             subBackValue.textContent = subBackOptions[currentSubBackIndex].name;
             sendMPVCommand({ command: ['set_property', 'sub-back-color', subBackOptions[currentSubBackIndex].value] });
             break;
-            
+
         case 'sub-delay':
             if (direction === 'left') {
                 currentSubDelay -= 100;
@@ -738,6 +761,8 @@ function handleMoreOptionsKey(e) {
         }
         case 'Escape':
         case 'Backspace':
+        case 'o':
+        case 'O':
             e.preventDefault();
             hideMoreOptions();
             break;
@@ -815,9 +840,10 @@ function resetHideTimer() {
     if (hideTimeout) {
         clearTimeout(hideTimeout);
     }
+    const osdSecs = parseInt(localStorage.getItem('osdDuration') || '3', 10);
     hideTimeout = setTimeout(() => {
         hideOSD();
-    }, 5000); // Hide after 5 seconds
+    }, osdSecs * 1000);
 }
 
 // Start update loop for clock
@@ -982,6 +1008,7 @@ function playItemSeamlessly(itemData) {
         movieData.title = meta.title || '';
         movieData.year = meta.year || '';
         movieData.rating = meta.rating || '';
+        movieData.imdbRating = meta.imdbRating || '';
         movieData.resolution = meta.resolution || '';
         movieData.runtime = meta.runtime || 0;
         movieData.accentColor = meta.accentColor || '#39ddd8';
@@ -1007,12 +1034,13 @@ function playItemSeamlessly(itemData) {
         const leftMetaItems = [];
         if (movieData.year) leftMetaItems.push(`<span>${movieData.year}</span>`);
         if (movieData.rating) leftMetaItems.push(`<span>${movieData.rating}</span>`);
-        
+        if (movieData.imdbRating) leftMetaItems.push(`<span>IMDb ${movieData.imdbRating}</span>`);
+
         let metaHTML = '';
         if (leftMetaItems.length > 0) {
             metaHTML = `<div class="osd-meta-left">${leftMetaItems.join('<span class="osd-divider">|</span>')}</div>`;
         }
-        
+
         if (movieData.resolution) {
             metaHTML += `<div class="osd-resolution">${movieData.resolution}</div>`;
         }
@@ -1098,8 +1126,11 @@ infoBtn.addEventListener('click', () => {
 });
 
 function isSubtitlesDirty() {
-    return currentSubSize !== 100 || currentSubPos !== 100 || currentSubDelay !== 0 ||
-           currentSubColorIndex !== 0 || currentSubBackIndex !== 0;
+    return currentSubSize !== subtitleConfigDefaults.size ||
+           currentSubPos !== subtitleConfigDefaults.position ||
+           currentSubDelay !== 0 ||
+           currentSubColorIndex !== subtitleConfigDefaults.colorIndex ||
+           currentSubBackIndex !== subtitleConfigDefaults.backgroundIndex;
 }
 
 function isVideoDirty() {
@@ -1127,21 +1158,21 @@ function updateResetButtons() {
 }
 
 function resetSubtitles() {
-    currentSubSize = 100;
-    subSizeValue.textContent = '100%';
-    sendMPVCommand({ command: ['set_property', 'sub-scale', 1] });
+    currentSubSize = subtitleConfigDefaults.size;
+    subSizeValue.textContent = currentSubSize + '%';
+    sendMPVCommand({ command: ['set_property', 'sub-scale', currentSubSize / 100] });
 
-    currentSubPos = 100;
-    subPosValue.textContent = '100%';
-    sendMPVCommand({ command: ['set_property', 'sub-pos', 100] });
+    currentSubPos = subtitleConfigDefaults.position;
+    subPosValue.textContent = currentSubPos + '%';
+    sendMPVCommand({ command: ['set_property', 'sub-pos', currentSubPos] });
 
-    currentSubColorIndex = 0;
-    subColorValue.textContent = subColorOptions[0].name;
-    sendMPVCommand({ command: ['set_property', 'sub-color', subColorOptions[0].value] });
+    currentSubColorIndex = subtitleConfigDefaults.colorIndex;
+    subColorValue.textContent = subColorOptions[currentSubColorIndex].name;
+    sendMPVCommand({ command: ['set_property', 'sub-color', subColorOptions[currentSubColorIndex].value] });
 
-    currentSubBackIndex = 0;
-    subBackValue.textContent = subBackOptions[0].name;
-    sendMPVCommand({ command: ['set_property', 'sub-back-color', subBackOptions[0].value] });
+    currentSubBackIndex = subtitleConfigDefaults.backgroundIndex;
+    subBackValue.textContent = subBackOptions[currentSubBackIndex].name;
+    sendMPVCommand({ command: ['set_property', 'sub-back-color', subBackOptions[currentSubBackIndex].value] });
 
     currentSubDelay = 0;
     subDelayValue.textContent = '0ms';
@@ -1250,7 +1281,15 @@ document.addEventListener('keydown', (e) => {
         }
         return;
     }
-    
+
+    // O: open more options panel
+    if (e.key === 'o' || e.key === 'O') {
+        e.preventDefault();
+        showOSD('buttons');
+        showMoreOptions();
+        return;
+    }
+
     // If OSD is visible
     if (osdVisible) {
         if (focusMode === 'scrubbar') {
@@ -1438,11 +1477,15 @@ ipcRenderer.on('movie-data', (event, data) => {
     if (movieData.year) {
         leftMetaItems.push(`<span>${movieData.year}</span>`);
     }
-    
+
     if (movieData.rating) {
         leftMetaItems.push(`<span>${movieData.rating}</span>`);
     }
-    
+
+    if (movieData.imdbRating) {
+        leftMetaItems.push(`<span>IMDb ${movieData.imdbRating}</span>`);
+    }
+
     // Note: "Ends at" removed as it cannot be dynamically updated
     
     // Build left side with dividers
@@ -1735,12 +1778,14 @@ function playNextEpisode() {
         movieData.title = nextEpisodeData.showTitle;
         movieData.year = seasonEp;
         movieData.rating = nextEpisodeData.title;
+        movieData.imdbRating = nextEpisodeData.imdbRating || '';
         movieData.videoPath = nextEpisodeData.videoPath;
-        
+
         title.textContent = movieData.title;
         const metaItems = [];
         if (movieData.year) metaItems.push(`<span>${movieData.year}</span>`);
         if (movieData.rating) metaItems.push(`<span>${movieData.rating}</span>`);
+        if (movieData.imdbRating) metaItems.push(`<span>IMDb ${movieData.imdbRating}</span>`);
         let metaHTML = '';
         if (metaItems.length > 0) {
             metaHTML = `<div class="osd-meta-left">${metaItems.join('<span class="osd-divider">|</span>')}</div>`;

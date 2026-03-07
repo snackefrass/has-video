@@ -1,6 +1,11 @@
 // Search UI Logic
 const fs = require('fs');
 const path = require('path');
+const ContextMenu = require('./context-menu');
+const WatchDataManager = require('./watch-data');
+
+const contextMenu = new ContextMenu();
+const watchDataManager = new WatchDataManager();
 
 // State
 let searchQuery = '';
@@ -39,10 +44,19 @@ async function loadConfig() {
 
 function setupKeyboardListeners() {
     document.addEventListener('keydown', (e) => {
+        // Let context menu handle keys when active
+        if (contextMenu.isActive()) {
+            if (e.key === 'ArrowUp') { e.preventDefault(); contextMenu.handleArrowUp(); }
+            else if (e.key === 'ArrowDown') { e.preventDefault(); contextMenu.handleArrowDown(); }
+            else if (e.key === 'Enter') { e.preventDefault(); contextMenu.handleEnter(); }
+            else if (e.key === 'Escape' || e.key === 'Backspace') { e.preventDefault(); contextMenu.handleBack(); }
+            return;
+        }
+
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Escape'].includes(e.key)) {
             e.preventDefault();
         }
-        
+
         switch(e.key) {
             case 'ArrowUp':
                 handleArrowUp();
@@ -78,6 +92,17 @@ function setupKeyboardListeners() {
                     navIndex = navItems.findIndex(item => item.classList.contains('nav-item-active'));
                     if (navIndex < 0) navIndex = 0;
                     updateNavFocus();
+                }
+                break;
+            case 'o':
+            case 'O':
+                if (currentMode === 'movies') {
+                    const movie = currentMovieResults[movieResultIndex];
+                    const card = movieResultCards[movieResultIndex];
+                    if (movie && card) showSearchMovieContextMenu(movie, card);
+                } else if (currentMode === 'tvshows') {
+                    const show = currentTVResults[tvResultIndex];
+                    if (show) showSearchTVShowContextMenu(show);
                 }
                 break;
         }
@@ -297,14 +322,17 @@ function handleEnter() {
 
 function handleBack() {
     if (searchQuery.length > 0) {
-        // Backspace
-        searchQuery = searchQuery.slice(0, -1);
-        console.log('Backspace, new query:', searchQuery);
+        // Clear entire query
+        searchQuery = '';
         updateSearchDisplay();
         performSearch();
+        // Reset focus to A
+        currentMode = 'keyboard';
+        keyboardIndex = 0;
+        updateKeyboardFocus();
+        updateResultsFocus();
     } else {
-        // Go back to main page
-        console.log('Going back to main page');
+        // No query — go back to main page
         window.location.href = 'index.html';
     }
 }
@@ -332,12 +360,15 @@ function updateResultsFocus() {
 
 function updateNavFocus() {
     const sideNav = document.querySelector('.side-nav');
-    
+    const overlay = document.getElementById('navOverlay');
+
     // Expand nav when in nav mode, collapse otherwise
     if (currentMode === 'nav') {
         sideNav.classList.add('expanded');
+        if (overlay) overlay.classList.add('visible');
     } else {
         sideNav.classList.remove('expanded');
+        if (overlay) overlay.classList.remove('visible');
     }
     
     navItems.forEach((item, i) => {
@@ -486,51 +517,48 @@ function createMovieCard(movie, index) {
     card.className = 'cast-card'; // Use cast-card class!
     card.dataset.index = index;
     card.dataset.type = 'movie';
-    
+
     // Add click handler to open detail page
     card.onclick = () => {
         openMovieDetail(movie);
     };
-    
+
     const metadata = movie.metadata;
-    const watchStatus = movie.watchStatus || { watched: false, percentage: 0 };
-    
+    const watchStatus = watchDataManager.getWatchStatus(movie.videoPath);
+
     // Image container with cast-card structure
     const imageContainer = document.createElement('div');
     imageContainer.className = 'cast-card-image-container';
-    
+
     const outerStroke = document.createElement('div');
     outerStroke.className = 'cast-card-outer-stroke';
-    
+
     const innerStroke = document.createElement('div');
     innerStroke.className = 'cast-card-inner-stroke';
-    
+
     const img = document.createElement('img');
     img.className = 'cast-card-image';
-    img.src = movie.posterPath 
-        ? `file://${movie.posterPath}` 
+    img.src = movie.posterPath
+        ? `file://${movie.posterPath}`
         : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>';
     img.alt = metadata.title;
     img.onerror = () => {
         img.className = 'cast-card-image cast-card-placeholder';
     };
-    
+
     innerStroke.appendChild(img);
     outerStroke.appendChild(innerStroke);
     imageContainer.appendChild(outerStroke);
-    
-    // Watched badge (only show if fully watched) - add to imageContainer
+
+    // Watched badge (only show if fully watched)
     if (watchStatus.watched) {
         const badge = document.createElement('div');
         badge.className = 'watched-badge';
-        const icon = document.createElement('img');
-        icon.src = 'assets/icons/watched.svg';
-        icon.alt = 'Watched';
-        badge.appendChild(icon);
+        badge.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 24C15.1826 24 18.2348 22.7357 20.4853 20.4853C22.7357 18.2348 24 15.1826 24 12C24 8.8174 22.7357 5.76516 20.4853 3.51472C18.2348 1.26428 15.1826 0 12 0C8.8174 0 5.76516 1.26428 3.51472 3.51472C1.26428 5.76516 0 8.8174 0 12C0 15.1826 1.26428 18.2348 3.51472 20.4853C5.76516 22.7357 8.8174 24 12 24ZM17.2969 9.79688L11.2969 15.7969C10.8563 16.2375 10.1438 16.2375 9.70781 15.7969L6.70781 12.7969C6.26719 12.3563 6.26719 11.6438 6.70781 11.2078C7.14844 10.7719 7.86094 10.7672 8.29688 11.2078L10.5 13.4109L15.7031 8.20312C16.1437 7.7625 16.8562 7.7625 17.2922 8.20312C17.7281 8.64375 17.7328 9.35625 17.2922 9.79219L17.2969 9.79688Z" fill="white"/></svg>`;
         imageContainer.appendChild(badge);
     }
-    
-    // Progress bar (show if 10+ min watched AND 10+ min remaining) - add to imageContainer
+
+    // Progress bar (show if 10+ min watched AND 10+ min remaining)
     const timeRemaining = watchStatus.duration - watchStatus.position;
     if (watchStatus.position >= 600 && timeRemaining > 600) {
         const progressBar = document.createElement('div');
@@ -541,7 +569,15 @@ function createMovieCard(movie, index) {
         progressBar.appendChild(progressFill);
         imageContainer.appendChild(progressBar);
     }
-    
+
+    // Favorites badge
+    if (watchDataManager.isFavoriteMovie(movie.videoPath)) {
+        const favBadge = document.createElement('div');
+        favBadge.className = 'favorites-badge';
+        favBadge.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5844 21.691C11.4 22.4347 12.6094 22.4347 13.425 21.691C19.5938 16.0785 23.625 12.3941 23.625 7.87476C23.625 4.19038 20.7188 1.31226 17.0156 1.31226C14.9438 1.31226 12.9563 2.27476 11.9953 3.69038C11.0344 2.27476 9.04688 1.31226 6.98438 1.31226C3.28125 1.31226 0.375 4.19038 0.375 7.87476C0.375 12.3941 4.40625 16.0785 10.5844 21.691Z" fill="var(--favorites, #FD9FCE)"/></svg>`;
+        imageContainer.appendChild(favBadge);
+    }
+
     card.appendChild(imageContainer);
     
     // Info (using cast-card-info structure)
@@ -597,25 +633,44 @@ function createTVShowCard(show, index) {
     innerStroke.appendChild(img);
     outerStroke.appendChild(innerStroke);
     imageContainer.appendChild(outerStroke);
-    
+
+    // Watched badge (if all episodes watched)
+    let allWatched = show.seasons && show.seasons.length > 0;
+    if (allWatched) {
+        outer: for (const season of show.seasons) {
+            if (season.episodes && season.episodes.length > 0) {
+                for (const episode of season.episodes) {
+                    const ws = watchDataManager.getWatchStatus(episode.videoPath);
+                    if (!ws || !ws.watched) { allWatched = false; break outer; }
+                }
+            }
+        }
+    }
+    if (allWatched) {
+        const badge = document.createElement('div');
+        badge.className = 'watched-badge';
+        badge.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 24C15.1826 24 18.2348 22.7357 20.4853 20.4853C22.7357 18.2348 24 15.1826 24 12C24 8.8174 22.7357 5.76516 20.4853 3.51472C18.2348 1.26428 15.1826 0 12 0C8.8174 0 5.76516 1.26428 3.51472 3.51472C1.26428 5.76516 0 8.8174 0 12C0 15.1826 1.26428 18.2348 3.51472 20.4853C5.76516 22.7357 8.8174 24 12 24ZM17.2969 9.79688L11.2969 15.7969C10.8563 16.2375 10.1438 16.2375 9.70781 15.7969L6.70781 12.7969C6.26719 12.3563 6.26719 11.6438 6.70781 11.2078C7.14844 10.7719 7.86094 10.7672 8.29688 11.2078L10.5 13.4109L15.7031 8.20312C16.1437 7.7625 16.8562 7.7625 17.2922 8.20312C17.7281 8.64375 17.7328 9.35625 17.2922 9.79219L17.2969 9.79688Z" fill="white"/></svg>`;
+        imageContainer.appendChild(badge);
+    }
+
     card.appendChild(imageContainer);
-    
+
     // Info
     const info = document.createElement('div');
     info.className = 'cast-card-info';
-    
+
     const title = document.createElement('div');
     title.className = 'cast-card-name';
     title.textContent = show.title;
     info.appendChild(title);
-    
+
     const year = document.createElement('div');
     year.className = 'cast-card-role';
     year.textContent = show.year || '';
     info.appendChild(year);
-    
+
     card.appendChild(info);
-    
+
     return card;
 }
 
@@ -923,6 +978,124 @@ function handleNavClick(page) {
             window.location.href = 'settings.html';
             break;
     }
+}
+
+function showSearchMovieContextMenu(movie, card) {
+    const videoPath = movie.videoPath;
+    const ws = watchDataManager.getWatchStatus(videoPath);
+    const isWatched = ws && ws.watched;
+    const hasProgress = ws && ws.position > 0;
+    const isFav = watchDataManager.isFavoriteMovie(videoPath);
+
+    const options = [];
+
+    if (hasProgress) {
+        options.push({ icon: 'assets/icons/remove-progress.svg', label: 'Remove Progress', action: 'remove-progress' });
+    }
+    options.push({
+        icon: isWatched ? 'assets/icons/unwatched.svg' : 'assets/icons/watched.svg',
+        label: isWatched ? 'Mark as Unwatched' : 'Mark as Watched',
+        action: isWatched ? 'unwatch' : 'watch'
+    });
+    options.push({
+        icon: isFav ? 'assets/icons/heart-fill.svg' : 'assets/icons/heart-outline.svg',
+        label: isFav ? 'Remove from Favorites' : 'Add to Favorites',
+        action: 'toggle-favorite'
+    });
+
+    contextMenu.show(options, (action) => {
+        switch (action) {
+            case 'remove-progress':
+                watchDataManager.clearPosition(videoPath);
+                const pb = card.querySelector('.progress-bar');
+                if (pb) pb.remove();
+                break;
+            case 'watch':
+                watchDataManager.markWatched(videoPath, 0);
+                if (!card.querySelector('.watched-badge')) {
+                    const badge = document.createElement('div');
+                    badge.className = 'watched-badge';
+                    badge.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 24C15.1826 24 18.2348 22.7357 20.4853 20.4853C22.7357 18.2348 24 15.1826 24 12C24 8.8174 22.7357 5.76516 20.4853 3.51472C18.2348 1.26428 15.1826 0 12 0C8.8174 0 5.76516 1.26428 3.51472 3.51472C1.26428 5.76516 0 8.8174 0 12C0 15.1826 1.26428 18.2348 3.51472 20.4853C5.76516 22.7357 8.8174 24 12 24ZM17.2969 9.79688L11.2969 15.7969C10.8563 16.2375 10.1438 16.2375 9.70781 15.7969L6.70781 12.7969C6.26719 12.3563 6.26719 11.6438 6.70781 11.2078C7.14844 10.7719 7.86094 10.7672 8.29688 11.2078L10.5 13.4109L15.7031 8.20312C16.1437 7.7625 16.8562 7.7625 17.2922 8.20312C17.7281 8.64375 17.7328 9.35625 17.2922 9.79219L17.2969 9.79688Z" fill="white"/></svg>`;
+                    const imgContainer = card.querySelector('.cast-card-image-container');
+                    if (imgContainer) imgContainer.appendChild(badge);
+                }
+                const progressBar = card.querySelector('.progress-bar');
+                if (progressBar) progressBar.remove();
+                break;
+            case 'unwatch':
+                watchDataManager.markUnwatched(videoPath);
+                const wb = card.querySelector('.watched-badge');
+                if (wb) wb.remove();
+                break;
+            case 'toggle-favorite':
+                if (watchDataManager.isFavoriteMovie(videoPath)) {
+                    watchDataManager.removeFavoriteMovie(videoPath);
+                } else {
+                    watchDataManager.addFavoriteMovie(videoPath);
+                }
+                break;
+        }
+    });
+}
+
+function showSearchTVShowContextMenu(show) {
+    // Check if all episodes are watched
+    let allWatched = true;
+    if (show.seasons && show.seasons.length > 0) {
+        outer: for (const season of show.seasons) {
+            if (season.episodes && season.episodes.length > 0) {
+                for (const episode of season.episodes) {
+                    const ws = watchDataManager.getWatchStatus(episode.videoPath);
+                    if (!ws || !ws.watched) { allWatched = false; break outer; }
+                }
+            }
+        }
+    }
+
+    const isQL = watchDataManager.isQuickplayShow(show.showPath);
+
+    const options = [
+        {
+            icon: allWatched ? 'assets/icons/unwatched.svg' : 'assets/icons/watched.svg',
+            label: allWatched ? 'Mark Show as Unwatched' : 'Mark Show as Watched',
+            action: allWatched ? 'unwatch-show' : 'watch-show'
+        },
+        {
+            icon: isQL ? 'assets/icons/bolt-slash.svg' : 'assets/icons/bolt.svg',
+            label: isQL ? 'Remove from Quickplay' : 'Add to Quickplay',
+            action: 'toggle-quickplay'
+        }
+    ];
+
+    contextMenu.show(options, (action) => {
+        switch (action) {
+            case 'watch-show':
+                if (show.seasons) {
+                    show.seasons.forEach(season => {
+                        if (season.episodes) {
+                            season.episodes.forEach(ep => watchDataManager.markWatched(ep.videoPath, ep.runtime || 0));
+                        }
+                    });
+                }
+                break;
+            case 'unwatch-show':
+                if (show.seasons) {
+                    show.seasons.forEach(season => {
+                        if (season.episodes) {
+                            season.episodes.forEach(ep => watchDataManager.markUnwatched(ep.videoPath));
+                        }
+                    });
+                }
+                break;
+            case 'toggle-quickplay':
+                if (watchDataManager.isQuickplayShow(show.showPath)) {
+                    watchDataManager.removeQuickplayShow(show.showPath);
+                } else {
+                    watchDataManager.addQuickplayShow(show.showPath);
+                }
+                break;
+        }
+    });
 }
 
 function loadAccentColor() {

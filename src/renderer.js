@@ -417,7 +417,11 @@ function showHomeScreen(restoreState = false) {
     if (alphabetNav) {
         alphabetNav.style.display = 'none';
     }
-    
+
+    // Hide grid page title on home
+    const pageTitleEl = document.getElementById('gridPageTitle');
+    if (pageTitleEl) pageTitleEl.style.display = 'none';
+
     // Show home view
     const homeView = document.getElementById('homeView');
     homeView.style.display = 'block';
@@ -439,23 +443,44 @@ function showHomeScreen(restoreState = false) {
             // Refresh Continue Watching carousel to show updated Up Next
             didRebuild = refreshContinueWatchingCarousel();
             
+            // Helper: given a CW items array and the played videoPath, find the index of
+            // the played item OR — if it was watched and replaced — the next episode.
+            const findCWIndex = (items, playedPath) => {
+                // First look for the exact item
+                let idx = items.findIndex(item => {
+                    if (item.type === 'movie' && item.data) return item.data.videoPath === playedPath;
+                    if (item.type === 'tv' && item.data && item.data.episode) return item.data.episode.videoPath === playedPath;
+                    return false;
+                });
+                if (idx !== -1) return idx;
+
+                // Not found — episode was watched and removed. Look for the next episode
+                // that _activeShows recorded as following the played one.
+                const activeShows = watchDataManager && watchDataManager.watchData._activeShows;
+                if (activeShows) {
+                    for (const activeShow of Object.values(activeShows)) {
+                        if (activeShow.lastEpisodePath === playedPath && activeShow.nextEpisodePath) {
+                            idx = items.findIndex(item =>
+                                item.type === 'tv' && item.data?.episode?.videoPath === activeShow.nextEpisodePath
+                            );
+                            if (idx !== -1) return idx;
+                            break;
+                        }
+                    }
+                }
+                return -1;
+            };
+
             if (didRebuild) {
                 // Carousels were rebuilt - try to find the item by videoPath
                 currentCarouselIndex = window.continueWatchingIndex || 1;
                 currentCardIndex = 0;
-                
+
                 // If we have a saved videoPath and we were in continue watching, find the item
                 if (savedVideoPath && savedCarouselId === 'continue-watching') {
                     const continueWatchingCarousel = homeCarousels[currentCarouselIndex];
                     if (continueWatchingCarousel && continueWatchingCarousel.items) {
-                        const foundIndex = continueWatchingCarousel.items.findIndex(item => {
-                            if (item.type === 'movie' && item.data) {
-                                return item.data.videoPath === savedVideoPath;
-                            } else if (item.type === 'tv' && item.data && item.data.episode) {
-                                return item.data.episode.videoPath === savedVideoPath;
-                            }
-                            return false;
-                        });
+                        const foundIndex = findCWIndex(continueWatchingCarousel.items, savedVideoPath);
                         if (foundIndex !== -1) {
                             currentCardIndex = foundIndex;
                             console.log('Found item by videoPath at index:', foundIndex);
@@ -465,27 +490,20 @@ function showHomeScreen(restoreState = false) {
             } else {
                 // Refresh watch status badges on all other cards
                 refreshHomeCardsWatchStatus();
-                
+
                 // Restore position
                 currentCarouselIndex = savedCarouselIndex;
-                
+
                 // If we were in continue watching, find the item by videoPath (items may have reordered)
                 if (savedVideoPath && savedCarouselId === 'continue-watching') {
                     const continueWatchingCarousel = homeCarousels[currentCarouselIndex];
                     if (continueWatchingCarousel && continueWatchingCarousel.items) {
-                        const foundIndex = continueWatchingCarousel.items.findIndex(item => {
-                            if (item.type === 'movie' && item.data) {
-                                return item.data.videoPath === savedVideoPath;
-                            } else if (item.type === 'tv' && item.data && item.data.episode) {
-                                return item.data.episode.videoPath === savedVideoPath;
-                            }
-                            return false;
-                        });
+                        const foundIndex = findCWIndex(continueWatchingCarousel.items, savedVideoPath);
                         if (foundIndex !== -1) {
                             currentCardIndex = foundIndex;
                             console.log('Found item by videoPath at index:', foundIndex);
                         } else {
-                            // Item not found (maybe removed from continue watching), use saved index
+                            // Item not found and no next episode in CW, use saved index
                             currentCardIndex = savedCardIndex;
                         }
                     } else {
@@ -687,7 +705,7 @@ function buildHomeCarousels() {
         });
         carouselCardIndices.push(0);
     }
-    
+
     // 3. Random Movies carousel
     if (randomMovies.length > 0) {
         homeCarousels.push({
@@ -847,6 +865,43 @@ function buildGenreCarousel(genre) {
         posterPath: movie.posterPath,
         fanartPath: movie.fanartPath
     }));
+}
+
+/**
+ * Build Favorite Movies carousel items for the home screen (movies only, shuffled, capped at 19 + View All)
+ */
+function buildFavoritesCarousels() {
+    const moviePaths = watchDataManager.getFavoriteMoviePaths();
+
+    let movies = moviePaths
+        .map(p => allMovies.find(m => m.videoPath === p))
+        .filter(Boolean);
+
+    // Shuffle
+    for (let i = movies.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [movies[i], movies[j]] = [movies[j], movies[i]];
+    }
+
+    // Cap at 19, then append View All card
+    const capped = movies.slice(0, 19);
+
+    const moviesItems = capped.map(movie => ({
+        type: 'movie',
+        data: movie,
+        title: movie.metadata.title,
+        year: movie.metadata.year,
+        posterPath: movie.posterPath,
+        fanartPath: movie.fanartPath,
+        isFavoriteCarousel: true
+    }));
+
+    // Append View All card if there are any favorites
+    if (moviesItems.length > 0) {
+        moviesItems.push({ type: 'view-all-favorites', title: 'View All' });
+    }
+
+    return { moviesItems };
 }
 
 /**
@@ -1023,6 +1078,45 @@ function refreshContinueWatchingCarousel() {
  * Create a home card element
  */
 function createHomeCard(item, carouselIndex, cardIndex) {
+    // Special card: View All Favorites
+    if (item.type === 'view-all-favorites') {
+        const card = document.createElement('div');
+        card.className = 'home-card home-card-view-all';
+        card.dataset.carouselIndex = carouselIndex;
+        card.dataset.cardIndex = cardIndex;
+        card.dataset.type = item.type;
+
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'home-card-image-container home-card-view-all-image';
+
+        const outerStroke = document.createElement('div');
+        outerStroke.className = 'home-card-outer-stroke';
+        const innerStroke = document.createElement('div');
+        innerStroke.className = 'home-card-inner-stroke home-card-view-all-inner';
+
+        const iconWrap = document.createElement('div');
+        iconWrap.className = 'home-card-view-all-icon';
+        iconWrap.innerHTML = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2.23125 13.8433L10.7016 21.7512C11.0531 22.0793 11.5172 22.2621 12 22.2621C12.4828 22.2621 12.9469 22.0793 13.2984 21.7512L21.7687 13.8433C23.1937 12.5168 24 10.6558 24 8.71053V8.43865C24 5.16209 21.6328 2.36834 18.4031 1.82928C16.2656 1.47303 14.0906 2.17147 12.5625 3.69959L12 4.26209L11.4375 3.69959C9.90938 2.17147 7.73438 1.47303 5.59688 1.82928C2.36719 2.36834 0 5.16209 0 8.43865V8.71053C0 10.6558 0.80625 12.5168 2.23125 13.8433Z" fill="var(--favorites)"/>
+        </svg>`;
+
+        innerStroke.appendChild(iconWrap);
+        outerStroke.appendChild(innerStroke);
+        imgContainer.appendChild(outerStroke);
+        card.appendChild(imgContainer);
+
+        const info = document.createElement('div');
+        info.className = 'home-card-info';
+        const title = document.createElement('div');
+        title.className = 'home-card-title';
+        title.textContent = 'View All';
+        info.appendChild(title);
+        card.appendChild(info);
+
+        card.onclick = () => handleHomeCardClick(item);
+        return card;
+    }
+
     const card = document.createElement('div');
     card.className = 'home-card';
     card.dataset.carouselIndex = carouselIndex;
@@ -1034,6 +1128,8 @@ function createHomeCard(item, carouselIndex, cardIndex) {
         card.dataset.videoPath = item.data.videoPath;
     } else if (item.type === 'tv' && item.data && item.data.episode) {
         card.dataset.videoPath = item.data.episode.videoPath;
+    } else if (item.type === 'tv-show' && item.data) {
+        card.dataset.showPath = item.data.showPath;
     }
     
     // Image container
@@ -1084,7 +1180,15 @@ function createHomeCard(item, carouselIndex, cardIndex) {
         shuffleIndicator.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.9244 1.61402C19.4868 1.37969 20.1289 1.51091 20.56 1.93739L23.5595 4.93681C23.8407 5.218 24 5.59762 24 5.99598C24 6.39434 23.8407 6.77395 23.5595 7.05514L20.56 10.0546C20.1289 10.4857 19.4868 10.6123 18.9244 10.3779C18.362 10.1436 17.9965 9.59996 17.9965 8.9907V7.491H16.4968C16.0234 7.491 15.5782 7.71127 15.297 8.09088L13.3099 10.7482L11.4353 8.25022L12.8975 6.3006C13.7458 5.16645 15.0814 4.50096 16.4968 4.50096H17.9965V3.00125C17.9965 2.39668 18.362 1.84835 18.9244 1.61402ZM7.686 13.2508L9.56063 15.7488L8.09842 17.6984C7.25015 18.8325 5.91447 19.498 4.49912 19.498H1.49971C0.670182 19.498 0 18.8278 0 17.9983C0 17.1688 0.670182 16.4986 1.49971 16.4986H4.49912C4.97247 16.4986 5.41769 16.2783 5.69889 15.8987L7.686 13.2508ZM20.5554 22.0616C20.1242 22.4928 19.4821 22.6193 18.9197 22.385C18.3574 22.1506 17.9918 21.607 17.9918 20.9977V19.498H16.4921C15.0767 19.498 13.7411 18.8325 12.8928 17.6984L5.69889 8.10025C5.41769 7.72064 4.97247 7.50037 4.49912 7.50037H1.49971C0.670182 7.50037 0 6.83019 0 6.00066C0 5.17114 0.670182 4.50096 1.49971 4.50096H4.49912C5.91447 4.50096 7.25015 5.16645 8.09842 6.3006L15.297 15.8987C15.5782 16.2783 16.0234 16.4986 16.4968 16.4986H17.9965V14.9989C17.9965 14.3943 18.362 13.846 18.9244 13.6117C19.4868 13.3773 20.1289 13.5086 20.56 13.9351L23.5595 16.9345C23.8407 17.2157 24 17.5953 24 17.9936C24 18.392 23.8407 18.7716 23.5595 19.0528L20.56 22.0522L20.5554 22.0616Z" fill="white"/></svg>`;
         imgContainer.appendChild(shuffleIndicator);
     }
-    
+
+    // Shuffle badge for favorite TV show cards
+    if (item.type === 'tv-show') {
+        const shuffleBadge = document.createElement('div');
+        shuffleBadge.className = 'shuffle-indicator favorites-shuffle-badge';
+        shuffleBadge.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.9244 1.61402C19.4868 1.37969 20.1289 1.51091 20.56 1.93739L23.5595 4.93681C23.8407 5.218 24 5.59762 24 5.99598C24 6.39434 23.8407 6.77395 23.5595 7.05514L20.56 10.0546C20.1289 10.4857 19.4868 10.6123 18.9244 10.3779C18.362 10.1436 17.9965 9.59996 17.9965 8.9907V7.491H16.4968C16.0234 7.491 15.5782 7.71127 15.297 8.09088L13.3099 10.7482L11.4353 8.25022L12.8975 6.3006C13.7458 5.16645 15.0814 4.50096 16.4968 4.50096H17.9965V3.00125C17.9965 2.39668 18.362 1.84835 18.9244 1.61402ZM7.686 13.2508L9.56063 15.7488L8.09842 17.6984C7.25015 18.8325 5.91447 19.498 4.49912 19.498H1.49971C0.670182 19.498 0 18.8278 0 17.9983C0 17.1688 0.670182 16.4986 1.49971 16.4986H4.49912C4.97247 16.4986 5.41769 16.2783 5.69889 15.8987L7.686 13.2508ZM20.5554 22.0616C20.1242 22.4928 19.4821 22.6193 18.9197 22.385C18.3574 22.1506 17.9918 21.607 17.9918 20.9977V19.498H16.4921C15.0767 19.498 13.7411 18.8325 12.8928 17.6984L5.69889 8.10025C5.41769 7.72064 4.97247 7.50037 4.49912 7.50037H1.49971C0.670182 7.50037 0 6.83019 0 6.00066C0 5.17114 0.670182 4.50096 1.49971 4.50096H4.49912C5.91447 4.50096 7.25015 5.16645 8.09842 6.3006L15.297 15.8987C15.5782 16.2783 16.0234 16.4986 16.4968 16.4986H17.9965V14.9989C17.9965 14.3943 18.362 13.846 18.9244 13.6117C19.4868 13.3773 20.1289 13.5086 20.56 13.9351L23.5595 16.9345C23.8407 17.2157 24 17.5953 24 17.9936C24 18.392 23.8407 18.7716 23.5595 19.0528L20.56 22.0522L20.5554 22.0616Z" fill="white"/></svg>`;
+        imgContainer.appendChild(shuffleBadge);
+    }
+
     card.appendChild(imgContainer);
     
     // Info
@@ -1206,7 +1310,7 @@ function updateHomeInfoSection(item) {
         // Update accent gradient
         const homeGradientEnabled = localStorage.getItem('homeGradientEnabled') !== 'false';
         if (homeGradientEnabled) {
-            accentEl.style.background = `linear-gradient(to top, ${accentColor}33 0%, transparent 50%)`;
+            accentEl.style.background = `linear-gradient(to top, ${accentColor}40 0%, transparent 50%)`;
         } else {
             accentEl.style.background = 'none';
         }
@@ -1285,7 +1389,7 @@ function updateHomeInfoSection(item) {
         // Update accent gradient
         const homeGradientEnabled = localStorage.getItem('homeGradientEnabled') !== 'false';
         if (homeGradientEnabled) {
-            accentEl.style.background = `linear-gradient(to top, ${accentColor}33 0%, transparent 50%)`;
+            accentEl.style.background = `linear-gradient(to top, ${accentColor}40 0%, transparent 50%)`;
         } else {
             accentEl.style.background = 'none';
         }
@@ -1371,11 +1475,25 @@ function handleHomeCardClick(item) {
     const isContinueWatching = homeCarousels[currentCarouselIndex] &&
         homeCarousels[currentCarouselIndex].title === 'Continue Watching';
 
-    if (item.type === 'movie') {
-        if (isContinueWatching) {
-            // Direct play from Continue Watching
+    if (item.type === 'view-all-favorites') {
+        // Navigate to Favorites page
+        hideHomeScreen();
+        switchToLibrary('favorites');
+        return;
+    } else if (item.type === 'tv-show') {
+        // Quickplay TV show card — start shuffle immediately
+        shuffleFavoriteShow(item.data.showPath);
+        return;
+    } else if (item.type === 'movie') {
+        if (isContinueWatching || item.isFavoriteCarousel) {
+            // Direct play from Continue Watching or Favorites carousel
             isHomeActive = false;
-            window.playMovie(item.data.videoPath, item.position || 0, item.data.metadata);
+            const ws = watchDataManager.getWatchStatus(item.data.videoPath);
+            const position = item.isFavoriteCarousel
+                ? (ws && ws.position > 600 ? ws.position : 0)
+                : (item.position || 0);
+            window.currentMovieMetadata = buildMovieOSDMetadata(item.data);
+            window.playMovieWithMetadata(item.data.videoPath, position, window.currentMovieMetadata);
         } else {
             // Go to movie detail
             hideHomeScreen();
@@ -2215,6 +2333,16 @@ function createMovieCard(movie) {
         </svg>`;
         posterContainer.appendChild(badge);
     }
+
+    // Favorites badge (left side, shown if movie is a favorite)
+    if (watchDataManager.isFavoriteMovie(movie.videoPath)) {
+        const favBadge = document.createElement('div');
+        favBadge.className = 'favorites-badge';
+        favBadge.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2.23125 13.8433L10.7016 21.7512C11.0531 22.0793 11.5172 22.2621 12 22.2621C12.4828 22.2621 12.9469 22.0793 13.2984 21.7512L21.7687 13.8433C23.1937 12.5168 24 10.6558 24 8.71053V8.43865C24 5.16209 21.6328 2.36834 18.4031 1.82928C16.2656 1.47303 14.0906 2.17147 12.5625 3.69959L12 4.26209L11.4375 3.69959C9.90938 2.17147 7.73438 1.47303 5.59688 1.82928C2.36719 2.36834 0 5.16209 0 8.43865V8.71053C0 10.6558 0.80625 12.5168 2.23125 13.8433Z" fill="white"/>
+        </svg>`;
+        posterContainer.appendChild(favBadge);
+    }
     
     // Progress bar (show if 10+ min watched AND 10+ min remaining) - add to posterContainer
     const timeRemaining = watchStatus.duration - watchStatus.position;
@@ -2714,6 +2842,11 @@ function openPlaylistDetail(playlist, initialFocus = null) {
             <path d="M12 24C15.1826 24 18.2348 22.7357 20.4853 20.4853C22.7357 18.2348 24 15.1826 24 12C24 8.8174 22.7357 5.76516 20.4853 3.51472C18.2348 1.26428 15.1826 0 12 0C8.8174 0 5.76516 1.26428 3.51472 3.51472C1.26428 5.76516 0 8.8174 0 12C0 15.1826 1.26428 18.2348 3.51472 20.4853C5.76516 22.7357 8.8174 24 12 24ZM17.2969 9.79688L11.2969 15.7969C10.8563 16.2375 10.1438 16.2375 9.70781 15.7969L6.70781 12.7969C6.26719 12.3563 6.26719 11.6438 6.70781 11.2078C7.14844 10.7719 7.86094 10.7672 8.29688 11.2078L10.5 13.4109L15.7031 8.20312C16.1437 7.7625 16.8562 7.7625 17.2922 8.20312C17.7281 8.64375 17.7328 9.35625 17.2922 9.79219L17.2969 9.79688Z"/>
         </svg>
     </div>`;
+    html += `<div class="playlist-poster-favorites-badge" id="playlistPosterFavorites" style="display: none;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2.23125 13.8433L10.7016 21.7512C11.0531 22.0793 11.5172 22.2621 12 22.2621C12.4828 22.2621 12.9469 22.0793 13.2984 21.7512L21.7687 13.8433C23.1937 12.5168 24 10.6558 24 8.71053V8.43865C24 5.16209 21.6328 2.36834 18.4031 1.82928C16.2656 1.47303 14.0906 2.17147 12.5625 3.69959L12 4.26209L11.4375 3.69959C9.90938 2.17147 7.73438 1.47303 5.59688 1.82928C2.36719 2.36834 0 5.16209 0 8.43865V8.71053C0 10.6558 0.80625 12.5168 2.23125 13.8433Z" fill="white"/>
+        </svg>
+    </div>`;
     html += '<div class="playlist-poster-progress" id="playlistPosterProgress" style="display: none;"><div class="playlist-poster-progress-bar" id="playlistPosterProgressBar"></div></div>';
     html += '</div>';
     
@@ -2941,10 +3074,12 @@ function setupPlaylistDetailNavigation() {
                             const activeIndex = window.keyboardNav.navItems.findIndex(item => item.classList.contains('nav-item-active'));
                             window.keyboardNav.navIndex = activeIndex >= 0 ? activeIndex : 4; // Playlists is index 4
                             window.keyboardNav.focusNavItem();
-                            
-                            // Expand nav
+
+                            // Expand nav + show overlay
                             const nav = document.getElementById('sideNav');
                             nav.classList.add('expanded');
+                            const overlay = document.getElementById('navOverlay');
+                            if (overlay) overlay.classList.add('visible');
                         }
                         return;
                     }
@@ -2958,18 +3093,18 @@ function setupPlaylistDetailNavigation() {
                             focusedIndex: window.playlistFocusedIndex,
                             buttonIndex: window.playlistItemButtonIndex
                         };
-                        
+
                         // Remove focus from playlist items
                         document.querySelectorAll('.playlist-item').forEach(item => {
                             item.classList.remove('focused');
                             item.querySelectorAll('.detail-button').forEach(btn => btn.classList.remove('focused'));
                         });
-                        
+
                         // Remove playlist key handler temporarily
                         if (window.playlistDetailKeyHandler) {
                             document.removeEventListener('keydown', window.playlistDetailKeyHandler, true);
                         }
-                        
+
                         // Enter nav mode
                         if (window.keyboardNav) {
                             window.keyboardNav.previousMode = 'playlist';
@@ -2978,9 +3113,12 @@ function setupPlaylistDetailNavigation() {
                             const activeIndex = window.keyboardNav.navItems.findIndex(item => item.classList.contains('nav-item-active'));
                             window.keyboardNav.navIndex = activeIndex >= 0 ? activeIndex : 4;
                             window.keyboardNav.focusNavItem();
-                            
+
+                            // Expand nav + show overlay
                             const nav = document.getElementById('sideNav');
                             nav.classList.add('expanded');
+                            const overlay = document.getElementById('navOverlay');
+                            if (overlay) overlay.classList.add('visible');
                         }
                         return;
                     }
@@ -3025,15 +3163,16 @@ function setupPlaylistDetailNavigation() {
             case 'n':
             case 'N':
                 e.preventDefault();
+                e.stopImmediatePropagation();
                 if (window.keyboardNav) {
                     window.playlistNavState = {
                         section: window.playlistFocusSection,
                         focusedIndex: window.playlistFocusedIndex,
                         buttonIndex: window.playlistItemButtonIndex
                     };
-                    window.keyboardNav.previousMode = 'playlist';
                     document.removeEventListener('keydown', window.playlistDetailKeyHandler, true);
                     window.keyboardNav.enterNavMode();
+                    window.keyboardNav.previousMode = 'playlist'; // Set after enterNavMode (which clears it)
                 }
                 break;
         }
@@ -3258,16 +3397,20 @@ function updatePlaylistDetailFocus(skipScroll = false) {
             if (movie) {
                 const posterImg = document.getElementById('playlistPosterImg');
                 const watchedBadge = document.getElementById('playlistPosterWatched');
+                const favoritesBadge = document.getElementById('playlistPosterFavorites');
                 const progressContainer = document.getElementById('playlistPosterProgress');
                 const progressBar = document.getElementById('playlistPosterProgressBar');
-                
+
                 if (posterImg && movie.posterPath) {
                     posterImg.src = `file://${movie.posterPath}`;
                 }
-                
+
                 const ws = watchDataManager.getWatchStatus(videoPath);
                 if (watchedBadge) {
                     watchedBadge.style.display = (ws && ws.watched) ? 'flex' : 'none';
+                }
+                if (favoritesBadge) {
+                    favoritesBadge.style.display = watchDataManager.isFavoriteMovie(videoPath) ? 'flex' : 'none';
                 }
                 
                 // Show progress bar if there's a saved position (regardless of watched status)
@@ -4007,6 +4150,7 @@ window.setupEmptyPlaylistNavigation = setupEmptyPlaylistNavigation;
 
 // Open TV show detail
 function openTVShowDetail(show) {
+    hideGridPageTitle();
     console.log('Opening TV show detail for:', show.title);
     
     // Set current show globally for context menu and other functions
@@ -4147,14 +4291,7 @@ function openTVShowDetail(show) {
         </button>
     `;
     
-    // Favorites button
-    html += `
-        <button class="detail-button" onclick="alert('Favorites not yet implemented')">
-            <img src="assets/icons/heart-outline.svg" class="detail-button-icon" alt="">
-            <span class="detail-button-text">Add to Favorites</span>
-        </button>
-    `;
-    
+
     // More Options button
     html += `
         <button class="detail-button" onclick="showTVShowDetailContextMenu()">
@@ -4248,6 +4385,7 @@ function openTVShowDetail(show) {
 
 // Open season detail page
 function openSeasonDetail(show, seasonNumber) {
+    hideGridPageTitle();
     console.log('Opening season detail:', show.title, 'Season', seasonNumber);
     
     // Save the season ARRAY INDEX for back navigation (not seasonNumber - 1)
@@ -4483,12 +4621,7 @@ function openSeasonDetail(show, seasonNumber) {
     html += `<span class="detail-button-text" id="seasonWatchedText">${watchedText}</span>`;
     html += '</button>';
     
-    // Favorite button
-    html += '<button class="detail-button">';
-    html += '<img src="assets/icons/heart-outline.svg" class="detail-button-icon" alt="">';
-    html += '<span class="detail-button-text">Add to Favorites</span>';
-    html += '</button>';
-    
+
     // More button
     html += '<button class="detail-button" onclick="showSeasonContextMenu()">';
     html += '<img src="assets/icons/more-options.svg" class="detail-button-icon" alt="">';
@@ -4830,10 +4963,20 @@ window.playTVEpisode = function(videoPath, startPosition, showTitle, seasonEp, e
     // Calculate end time (if episode has duration in metadata)
     const endTimeStr = ''; // TODO: Calculate from episode duration
     
+    // Look up IMDB rating for this episode from currentShow
+    let episodeImdbRating = '';
+    if (window.currentShow) {
+        for (const season of window.currentShow.seasons) {
+            const ep = season.episodes.find(e => e.videoPath === videoPath);
+            if (ep) { episodeImdbRating = ep.rating || ''; break; }
+        }
+    }
+
     const metadata = {
         title: showTitle,
         year: seasonEp,
         rating: episodeTitle,
+        imdbRating: episodeImdbRating,
         endTime: endTimeStr,
         resolution: '',
         runtime: 0,
@@ -4934,7 +5077,8 @@ function findNextEpisode(currentVideoPath) {
             runtime: nextEp.runtime || 30, // Default 30 min
             showTitle: show.title,
             showPath: show.showPath,
-            accentColor: show.accentColor || '#39ddd8'
+            accentColor: show.accentColor || '#39ddd8',
+            imdbRating: nextEp.rating || ''
         };
     } else if (currentEpisodeIndex === currentSeason.episodes.length - 1) {
         // Last episode of season - find next season
@@ -4951,7 +5095,8 @@ function findNextEpisode(currentVideoPath) {
                     runtime: nextEp.runtime || 30,
                     showTitle: show.title,
                     showPath: show.showPath,
-                    accentColor: show.accentColor || '#39ddd8'
+                    accentColor: show.accentColor || '#39ddd8',
+                    imdbRating: nextEp.rating || ''
                 };
             }
         }
@@ -5107,7 +5252,8 @@ function buildShuffleNextEpisodeData(episode) {
         runtime: episode.runtime || 30,
         showTitle: window.currentShow.title,
         showPath: window.currentShow.showPath,
-        accentColor: window.currentShow.accentColor || '#39ddd8'
+        accentColor: window.currentShow.accentColor || '#39ddd8',
+        imdbRating: episode.rating || ''
     };
 }
 
@@ -5262,7 +5408,18 @@ function updateEpisodeWatchedBadge(episodeIndex, isWatched) {
 // ==================== END TV SHOWS DETAIL ====================
 
 // Open movie detail
+function hideGridPageTitle() {
+    const el = document.getElementById('gridPageTitle');
+    if (el) el.style.display = 'none';
+}
+
+function restoreGridPageTitle() {
+    const el = document.getElementById('gridPageTitle');
+    if (el && el.textContent) el.style.display = 'flex';
+}
+
 function openDetail(movie, fromCarousel = false, isRefresh = false) {
+    hideGridPageTitle();
     // Set current movie globally for context menu and other functions
     window.currentMovie = movie;
     
@@ -5344,23 +5501,11 @@ function openDetail(movie, fromCarousel = false, isRefresh = false) {
         
         // Add accent gradient if accent color exists
         if (accentColor) {
-            // Convert hex to rgba with 25% opacity
-            let accentRgba = 'rgba(0, 0, 0, 0)'; // fallback
-            if (accentColor.startsWith('#')) {
-                const hex = accentColor.replace('#', '');
-                const r = parseInt(hex.substring(0, 2), 16);
-                const g = parseInt(hex.substring(2, 4), 16);
-                const b = parseInt(hex.substring(4, 6), 16);
-                accentRgba = `rgba(${r}, ${g}, ${b}, 0.25)`;
-            }
-            
             // Check if detail gradient is enabled
             const detailGradientEnabled = localStorage.getItem('detailGradientEnabled') !== 'false'; // Default true
-            
+
             if (detailGradientEnabled) {
-                html += `
-                    <div class="detail-fanart-gradient-bottom-accent" style="background: linear-gradient(to top, ${accentRgba}, rgba(0, 0, 0, 0));"></div>
-                `;
+                html += `<div class="detail-fanart-gradient-bottom-accent" style="background: linear-gradient(to top, ${accentColor}40 0%, transparent 50%);"></div>`;
             }
         }
     }
@@ -5379,7 +5524,16 @@ function openDetail(movie, fromCarousel = false, isRefresh = false) {
             </svg>
         </div>`;
     }
-    
+
+    // Favorites badge (show if movie is a favorite)
+    if (watchDataManager.isFavoriteMovie(movie.videoPath)) {
+        html += `<div class="favorites-badge">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.23125 13.8433L10.7016 21.7512C11.0531 22.0793 11.5172 22.2621 12 22.2621C12.4828 22.2621 12.9469 22.0793 13.2984 21.7512L21.7687 13.8433C23.1937 12.5168 24 10.6558 24 8.71053V8.43865C24 5.16209 21.6328 2.36834 18.4031 1.82928C16.2656 1.47303 14.0906 2.17147 12.5625 3.69959L12 4.26209L11.4375 3.69959C9.90938 2.17147 7.73438 1.47303 5.59688 1.82928C2.36719 2.36834 0 5.16209 0 8.43865V8.71053C0 10.6558 0.80625 12.5168 2.23125 13.8433Z" fill="white"/>
+            </svg>
+        </div>`;
+    }
+
     // Progress bar (only show if >0% and <90%)
     const timeRemaining = watchStatus.duration - watchStatus.position;
     if (watchStatus.position >= 600 && timeRemaining > 600) {
@@ -5682,11 +5836,11 @@ function openDetail(movie, fromCarousel = false, isRefresh = false) {
     `;
     
     // Favorites button
-    const isFavorite = false; // TODO: Check favorites status
+    const isFavorite = watchDataManager.isFavoriteMovie(movie.videoPath);
     const favIcon = isFavorite ? 'heart-fill' : 'heart-outline';
-    const favText = isFavorite ? 'Add to Favorites' : 'Remove from Favorites';
+    const favText = isFavorite ? 'Remove from Favorites' : 'Add to Favorites';
     html += `
-        <button class="detail-button" onclick="toggleFavorite()">
+        <button class="detail-button" data-fav-movie onclick="toggleFavorite()">
             <img src="assets/icons/${favIcon}.svg" class="detail-button-icon" alt="">
             <span class="detail-button-text">${favText}</span>
         </button>
@@ -6315,6 +6469,7 @@ function closeDetail() {
     // Hide detail page
     detailPage.style.display = 'none';
     contentArea.style.display = 'block';
+    restoreGridPageTitle();
     
     // Clear detail history when returning
     if (window.keyboardNav) {
@@ -6387,9 +6542,173 @@ function toggleWatchStatus() {
     openDetail(movie);
 }
 
-// Toggle favorite status (placeholder for now)
+// Toggle favorite status for the current movie detail page
 function toggleFavorite() {
-    console.log('Favorites not yet implemented');
+    if (!window.currentMovie) return;
+    const videoPath = window.currentMovie.videoPath;
+    const isFav = watchDataManager.isFavoriteMovie(videoPath);
+    if (isFav) {
+        watchDataManager.removeFavoriteMovie(videoPath);
+    } else {
+        watchDataManager.addFavoriteMovie(videoPath);
+    }
+    const nowFav = !isFav;
+    // Update button in-place
+    const btn = document.querySelector('.detail-button[data-fav-movie]');
+    if (btn) {
+        btn.querySelector('.detail-button-icon').src = `assets/icons/${nowFav ? 'heart-fill' : 'heart-outline'}.svg`;
+        btn.querySelector('.detail-button-text').textContent = nowFav ? 'Remove from Favorites' : 'Add to Favorites';
+    }
+    // Update favorites badge in the detail poster
+    const posterContainer = document.querySelector('.detail-poster-container');
+    if (posterContainer) {
+        const existing = posterContainer.querySelector('.favorites-badge');
+        if (nowFav && !existing) {
+            const badge = document.createElement('div');
+            badge.className = 'favorites-badge';
+            badge.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.23125 13.8433L10.7016 21.7512C11.0531 22.0793 11.5172 22.2621 12 22.2621C12.4828 22.2621 12.9469 22.0793 13.2984 21.7512L21.7687 13.8433C23.1937 12.5168 24 10.6558 24 8.71053V8.43865C24 5.16209 21.6328 2.36834 18.4031 1.82928C16.2656 1.47303 14.0906 2.17147 12.5625 3.69959L12 4.26209L11.4375 3.69959C9.90938 2.17147 7.73438 1.47303 5.59688 1.82928C2.36719 2.36834 0 5.16209 0 8.43865V8.71053C0 10.6558 0.80625 12.5168 2.23125 13.8433Z" fill="white"/></svg>`;
+            posterContainer.appendChild(badge);
+        } else if (!nowFav && existing) {
+            existing.remove();
+        }
+    }
+    // Sync badge across both grids
+    syncFavoritesBadge(videoPath, nowFav);
+}
+
+// Play a favorite movie directly (resume or start)
+function playFavoriteMovie(videoPath) {
+    const movie = allMovies.find(m => m.videoPath === videoPath);
+    if (!movie) return;
+    const ws = watchDataManager.getWatchStatus(videoPath);
+    const position = ws && ws.position > 600 ? ws.position : 0;
+    window.currentMovieMetadata = buildMovieOSDMetadata(movie);
+    window.playMovieWithMetadata(videoPath, position, window.currentMovieMetadata);
+}
+
+// Shuffle a favorite TV show immediately
+function shuffleFavoriteShow(showPath) {
+    const show = allShows.find(s => s.showPath === showPath);
+    if (!show) return;
+    window.currentShow = show;
+    window.shufflePlay();
+}
+
+// Sync the favorites badge on a movie card across all grids (movie grid + favorites view)
+function syncFavoritesBadge(videoPath, isFav) {
+    const heartSVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2.23125 13.8433L10.7016 21.7512C11.0531 22.0793 11.5172 22.2621 12 22.2621C12.4828 22.2621 12.9469 22.0793 13.2984 21.7512L21.7687 13.8433C23.1937 12.5168 24 10.6558 24 8.71053V8.43865C24 5.16209 21.6328 2.36834 18.4031 1.82928C16.2656 1.47303 14.0906 2.17147 12.5625 3.69959L12 4.26209L11.4375 3.69959C9.90938 2.17147 7.73438 1.47303 5.59688 1.82928C2.36719 2.36834 0 5.16209 0 8.43865V8.71053C0 10.6558 0.80625 12.5168 2.23125 13.8433Z" fill="white"/>
+        </svg>`;
+    const escaped = CSS.escape(videoPath);
+    [
+        document.querySelector(`#movieGrid .movie-card[data-video-path="${escaped}"]`),
+        document.querySelector(`#favoritesView .movie-card[data-video-path="${escaped}"]`)
+    ].forEach(card => {
+        if (!card) return;
+        const pc = card.querySelector('.movie-card-poster-container');
+        if (!pc) return;
+        const existing = pc.querySelector('.favorites-badge');
+        if (isFav && !existing) {
+            const badge = document.createElement('div');
+            badge.className = 'favorites-badge';
+            badge.innerHTML = heartSVG;
+            pc.appendChild(badge);
+        } else if (!isFav && existing) {
+            existing.remove();
+        }
+    });
+}
+
+// Build and render the Favorites page (movies-only grid)
+function buildFavoritesView() {
+    const container = document.getElementById('favoritesView');
+    if (!container) return;
+
+    const moviePaths = watchDataManager.getFavoriteMoviePaths();
+    let favMovies = moviePaths.map(p => allMovies.find(m => m.videoPath === p)).filter(Boolean);
+
+    // Sort alphabetically (same logic as movies grid)
+    favMovies.sort((a, b) => {
+        const titleA = (a.metadata.sortTitle || a.metadata.title.replace(/^(The|A|An)\s+/i, '')).toUpperCase();
+        const titleB = (b.metadata.sortTitle || b.metadata.title.replace(/^(The|A|An)\s+/i, '')).toUpperCase();
+        return titleA < titleB ? -1 : titleA > titleB ? 1 : 0;
+    });
+
+    container.innerHTML = '';
+
+    if (favMovies.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'favorites-empty';
+        empty.textContent = 'No favorites yet. Open a movie and press Add to Favorites.';
+        container.appendChild(empty);
+    } else {
+        const grid = document.createElement('div');
+        grid.className = 'movie-grid';
+        favMovies.forEach(movie => {
+            const card = createMovieCard(movie);
+            card.classList.add('favorites-card');
+            grid.appendChild(card);
+        });
+        container.appendChild(grid);
+    }
+
+    // Keyboard nav
+    if (typeof keyboardNav !== 'undefined') {
+        keyboardNav.mode = 'grid';
+        keyboardNav.updateItems('.favorites-card');
+        keyboardNav.currentIndex = 0;
+        if (favMovies.length > 0) keyboardNav.focusItem();
+    }
+
+    updateAlphabetNav();
+}
+
+// Build and render the Quickplay page (TV shows grid — click to shuffle)
+function buildQuickplayView() {
+    const container = document.getElementById('quickplayView');
+    if (!container) return;
+
+    const showPaths = watchDataManager.getQuickplayShowPaths();
+    const shows = showPaths.map(p => allShows.find(s => s.showPath === p)).filter(Boolean);
+    shows.sort((a, b) => {
+        const titleA = a.title.replace(/^(The|A|An)\s+/i, '').toUpperCase();
+        const titleB = b.title.replace(/^(The|A|An)\s+/i, '').toUpperCase();
+        return titleA.localeCompare(titleB);
+    });
+
+    container.innerHTML = '';
+
+    if (shows.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'favorites-empty';
+        empty.textContent = 'No Quickplay shows yet. Right-click a TV show and select Add to Quickplay.';
+        container.appendChild(empty);
+    } else {
+        const grid = document.createElement('div');
+        grid.className = 'movie-grid';
+        shows.forEach(show => {
+            const card = createTVShowCard(show);
+            card.classList.add('quickplay-card');
+            card.onclick = () => shuffleFavoriteShow(show.showPath);
+            // Add shuffle badge to poster
+            const posterContainer = card.querySelector('.tv-show-card-poster-container');
+            if (posterContainer) {
+                const badge = document.createElement('div');
+                badge.className = 'quickplay-shuffle-badge';
+                badge.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.9244 1.61402C19.4868 1.37969 20.1289 1.51091 20.56 1.93739L23.5595 4.93681C23.8407 5.218 24 5.59762 24 5.99598C24 6.39434 23.8407 6.77395 23.5595 7.05514L20.56 10.0546C20.1289 10.4857 19.4868 10.6123 18.9244 10.3779C18.362 10.1436 17.9965 9.59996 17.9965 8.9907V7.491H16.4968C16.0234 7.491 15.5782 7.71127 15.297 8.09088L13.3099 10.7482L11.4353 8.25022L12.8975 6.3006C13.7458 5.16645 15.0814 4.50096 16.4968 4.50096H17.9965V3.00125C17.9965 2.39668 18.362 1.84835 18.9244 1.61402ZM7.686 13.2508L9.56063 15.7488L8.09842 17.6984C7.25015 18.8325 5.91447 19.498 4.49912 19.498H1.49971C0.670182 19.498 0 18.8278 0 17.9983C0 17.1688 0.670182 16.4986 1.49971 16.4986H4.49912C4.97247 16.4986 5.41769 16.2783 5.69889 15.8987L7.686 13.2508ZM20.5554 22.0616C20.1242 22.4928 19.4821 22.6193 18.9197 22.385C18.3574 22.1506 17.9918 21.607 17.9918 20.9977V19.498H16.4921C15.0767 19.498 13.7411 18.8325 12.8928 17.6984L5.69889 8.10025C5.41769 7.72064 4.97247 7.50037 4.49912 7.50037H1.49971C0.670182 7.50037 0 6.83019 0 6.00066C0 5.17114 0.670182 4.50096 1.49971 4.50096H4.49912C5.91447 4.50096 7.25015 5.16645 8.09842 6.3006L15.297 15.8987C15.5782 16.2783 16.0234 16.4986 16.4968 16.4986H17.9965V14.9989C17.9965 14.3943 18.362 13.846 18.9244 13.6117C19.4868 13.3773 20.1289 13.5086 20.56 13.9351L23.5595 16.9345C23.8407 17.2157 24 17.5953 24 17.9936C24 18.392 23.8407 18.7716 23.5595 19.0528L20.56 22.0522L20.5554 22.0616Z" fill="white"/></svg>`;
+                posterContainer.appendChild(badge);
+            }
+            grid.appendChild(card);
+        });
+        container.appendChild(grid);
+    }
+
+    if (typeof keyboardNav !== 'undefined') {
+        keyboardNav.mode = 'grid';
+        keyboardNav.updateItems('.quickplay-card');
+        keyboardNav.currentIndex = 0;
+        if (shows.length > 0) keyboardNav.focusItem();
+    }
 }
 
 // Update all movie cards with current watch status
@@ -6595,11 +6914,8 @@ window.toggleWatchStatus = function() {
     console.log('Watch status toggled successfully');
 };
 
-// Toggle favorite status (stub for now)
-window.toggleFavorite = function() {
-    console.log('Toggle favorite - not yet implemented');
-    // TODO: Implement favorites toggling
-};
+// Expose toggleFavorite globally (called from onclick in HTML)
+window.toggleFavorite = toggleFavorite;
 
 // Handle playback ended
 ipcRenderer.on('playback-ended', async (event, videoPath) => {
@@ -6645,7 +6961,25 @@ ipcRenderer.on('playback-ended', async (event, videoPath) => {
         
         // Update localStorage cache
         localStorage.setItem('allMoviesCache', JSON.stringify(allMovies));
-        
+
+        // If this was a playlist playback, return to the playlist now.
+        // Must be checked before the detailIsOpen branch because the playlist
+        // detail reuses detailPage (making detailIsOpen=true), which would
+        // otherwise cause the movie-detail update path to run with stale data.
+        if (window.returnToPlaylist) {
+            const returnState = window.returnToPlaylist;
+            window.returnToPlaylist = null;
+            const playlist = playlistManager.getById(returnState.playlistId);
+            if (playlist) {
+                openPlaylistDetail(playlist, {
+                    section: returnState.section || 'list',
+                    focusedIndex: returnState.focusedIndex,
+                    buttonIndex: returnState.buttonIndex
+                });
+            }
+            return;
+        }
+
         // Check if detail page is open
         const detailPage = document.getElementById('detailPage');
         const detailIsOpen = detailPage && detailPage.style.display !== 'none';
@@ -7151,22 +7485,27 @@ ipcRenderer.on('playback-ended', async (event, videoPath) => {
                         watchDataManager.markUnwatched(videoPath);
                     }
 
-                    // If episode was watched and this was a shuffle-from-home play,
-                    // now advance Continue Watching to the next shuffle episode
-                    if (episodeWs.watched && wasInShuffleFromHome && window.currentShow) {
-                        for (const season of window.currentShow.seasons) {
-                            const ep = season.episodes.find(e => e.videoPath === videoPath);
-                            if (ep) {
-                                watchDataManager.updateActiveShow(
-                                    videoPath,
-                                    window.currentShow.showPath,
-                                    season.number,
-                                    ep.episode,
-                                    pendingShuffleNextPath,      // null if queue exhausted
-                                    !!pendingShuffleNextPath     // isShuffleQueue
-                                );
-                                break;
+                    // If episode was watched, advance Continue Watching to the next episode
+                    if (episodeWs.watched && window.currentShow) {
+                        if (wasInShuffleFromHome) {
+                            // Shuffle play — advance to next shuffle episode
+                            for (const season of window.currentShow.seasons) {
+                                const ep = season.episodes.find(e => e.videoPath === videoPath);
+                                if (ep) {
+                                    watchDataManager.updateActiveShow(
+                                        videoPath,
+                                        window.currentShow.showPath,
+                                        season.number,
+                                        ep.episode,
+                                        pendingShuffleNextPath,      // null if queue exhausted
+                                        !!pendingShuffleNextPath     // isShuffleQueue
+                                    );
+                                    break;
+                                }
                             }
+                        } else {
+                            // Normal play from home CW — advance to next sequential episode
+                            updateActiveShowTracking(videoPath, window.currentShow, window.currentSeason, true);
                         }
                     }
                 }
@@ -8341,8 +8680,8 @@ function scrollToLetter(letter) {
     console.log('scrollToLetter called with:', letter);
     
     // Get cards based on current library
-    const cardSelector = currentLibrary === 'movies' ? '.movie-card' : '.tv-show-card';
-    const titleSelector = currentLibrary === 'movies' ? '.movie-card-title' : '.tv-show-card-title';
+    const cardSelector = currentLibrary === 'tv' ? '.tv-show-card' : currentLibrary === 'favorites' ? '.favorites-card' : '.movie-card';
+    const titleSelector = currentLibrary === 'tv' ? '.tv-show-card-title' : '.movie-card-title';
     const cards = document.querySelectorAll(cardSelector);
     console.log('Total cards:', cards.length, 'Library:', currentLibrary);
     
@@ -8416,8 +8755,8 @@ window.scrollToLetter = scrollToLetter;
 
 function updateAlphabetNav() {
     // Get cards based on current library
-    const cardSelector = currentLibrary === 'movies' ? '.movie-card' : '.tv-show-card';
-    const titleSelector = currentLibrary === 'movies' ? '.movie-card-title' : '.tv-show-card-title';
+    const cardSelector = currentLibrary === 'tv' ? '.tv-show-card' : currentLibrary === 'favorites' ? '.favorites-card' : '.movie-card';
+    const titleSelector = currentLibrary === 'tv' ? '.tv-show-card-title' : '.movie-card-title';
     const cards = document.querySelectorAll(cardSelector);
     const availableLetters = new Set();
     
@@ -8490,6 +8829,18 @@ document.querySelectorAll('.nav-item').forEach(item => {
             homeStateBeforeDetail = null; // Clear so returning to home is fresh
             localStorage.setItem('lastLibrary', 'playlists');
             switchToLibrary('playlists');
+        } else if (page === 'quickplay') {
+            // Switch to Quickplay library
+            hideHomeScreen();
+            homeStateBeforeDetail = null;
+            localStorage.setItem('lastLibrary', 'quickplay');
+            switchToLibrary('quickplay');
+        } else if (page === 'favorites') {
+            // Switch to favorites library
+            hideHomeScreen();
+            homeStateBeforeDetail = null;
+            localStorage.setItem('lastLibrary', 'favorites');
+            switchToLibrary('favorites');
         } else if (page === 'settings') {
             // Navigate to settings page
             window.location.href = 'settings.html';
@@ -8512,9 +8863,21 @@ function switchToLibrary(library) {
     console.log('Switching to library:', library);
     currentLibrary = library;
     window.currentLibrary = library; // Keep window reference in sync
-    
+
     // Save to localStorage so we remember on next load
     localStorage.setItem('lastLibrary', library);
+
+    // Update grid page title
+    const pageTitleEl = document.getElementById('gridPageTitle');
+    if (pageTitleEl) {
+        const titles = { movies: 'Movies', tv: 'TV Shows', quickplay: 'Quickplay', playlists: 'Playlists', favorites: 'Favorites' };
+        if (titles[library]) {
+            pageTitleEl.textContent = titles[library];
+            pageTitleEl.style.display = 'flex';
+        } else {
+            pageTitleEl.style.display = 'none';
+        }
+    }
     
     // Remove focused class from all nav items
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -8531,10 +8894,10 @@ function switchToLibrary(library) {
     document.getElementById('contentArea').style.display = 'block';
     document.querySelector('.content-wrapper').style.display = 'flex';
     
-    // Show alphabet nav (hide for playlists)
+    // Show alphabet nav (hide for playlists and quickplay)
     const alphabetNav = document.querySelector('.alphabet-nav');
     if (alphabetNav) {
-        alphabetNav.style.display = library === 'playlists' ? 'none' : 'flex';
+        alphabetNav.style.display = (library === 'playlists' || library === 'quickplay') ? 'none' : 'flex';
     }
     
     // Hide/show appropriate grids
@@ -8633,25 +8996,75 @@ function switchToLibrary(library) {
         playlistGrid.style.display = 'grid';
         movieGrid.style.display = 'none';
         tvGrid.style.display = 'none';
-        
+
         // Always re-render playlists (they may have changed)
         renderPlaylistGrid();
-        
+
         // Update keyboard nav
         if (typeof keyboardNav !== 'undefined') {
             keyboardNav.mode = 'grid';
             keyboardNav.updateItems('.playlist-card');
             keyboardNav.currentIndex = 0;
             keyboardNav.focusItem();
-            
+
             // Collapse the nav
             const sideNav = document.querySelector('.side-nav');
             if (sideNav && sideNav.classList.contains('expanded')) {
                 sideNav.classList.remove('expanded');
             }
         }
+    } else if (library === 'favorites') {
+        // Show favorites view
+        const favoritesView = document.getElementById('favoritesView');
+        if (favoritesView) favoritesView.style.display = 'block';
+        movieGrid.style.display = 'none';
+        tvGrid.style.display = 'none';
+        playlistGrid.style.display = 'none';
+
+        buildFavoritesView();
+
+        // Update keyboard nav
+        if (typeof keyboardNav !== 'undefined') {
+            keyboardNav.mode = 'grid';
+            keyboardNav.items = Array.from(document.querySelectorAll('#favoritesView .movie-card'));
+            keyboardNav.currentIndex = 0;
+            keyboardNav.focusItem();
+
+            // Collapse the nav
+            const sideNav = document.querySelector('.side-nav');
+            if (sideNav && sideNav.classList.contains('expanded')) {
+                sideNav.classList.remove('expanded');
+            }
+        }
+    } else if (library === 'quickplay') {
+        // Show Quickplay view
+        const quickplayView = document.getElementById('quickplayView');
+        if (quickplayView) quickplayView.style.display = 'block';
+        movieGrid.style.display = 'none';
+        tvGrid.style.display = 'none';
+        playlistGrid.style.display = 'none';
+
+        buildQuickplayView();
+
+        // Collapse the nav
+        if (typeof keyboardNav !== 'undefined') {
+            const sideNav = document.querySelector('.side-nav');
+            if (sideNav && sideNav.classList.contains('expanded')) {
+                sideNav.classList.remove('expanded');
+            }
+        }
     }
-    
+
+    // Hide overlay views when switching away from them
+    if (library !== 'favorites') {
+        const favoritesView = document.getElementById('favoritesView');
+        if (favoritesView) favoritesView.style.display = 'none';
+    }
+    if (library !== 'quickplay') {
+        const quickplayView = document.getElementById('quickplayView');
+        if (quickplayView) quickplayView.style.display = 'none';
+    }
+
     // Update alphabet navigation
     updateAlphabetNav();
     
@@ -8967,13 +9380,23 @@ window.showTVShowGridContextMenu = function(tvShowCard) {
         }
     }
     
-    // Add to Favorites
+    // Add to / Remove from Quickplay
+    const isQLShowGrid = watchDataManager.isQuickplayShow(show.showPath);
     options.push({
-        icon: 'assets/icons/heart-outline.svg',
-        label: 'Add to Favorites',
-        action: 'add-favorites'
+        icon: isQLShowGrid ? 'assets/icons/bolt-slash.svg' : 'assets/icons/bolt.svg',
+        label: isQLShowGrid ? 'Remove from Quickplay' : 'Add to Quickplay',
+        action: 'add-quickplay'
     });
-    
+
+    // Go to Detail (only when viewing Quickplay grid, since clicking the card shuffles instead)
+    if (currentLibrary === 'quickplay') {
+        options.push({
+            icon: 'assets/icons/info.svg',
+            label: 'Go to Detail',
+            action: 'go-to-detail'
+        });
+    }
+
     // Show the context menu
     contextMenu.show(options, (action) => {
         handleTVShowGridContextMenuAction(action, show);
@@ -9071,8 +9494,17 @@ function handleTVShowGridContextMenuAction(action, show) {
             }
             break;
             
-        case 'add-favorites':
-            alert('Add to Favorites is not connected yet');
+        case 'add-quickplay': {
+            if (watchDataManager.isQuickplayShow(show.showPath)) {
+                watchDataManager.removeQuickplayShow(show.showPath);
+            } else {
+                watchDataManager.addQuickplayShow(show.showPath);
+            }
+            break;
+        }
+
+        case 'go-to-detail':
+            openTVShowDetail(show);
             break;
     }
 }
@@ -9244,13 +9676,14 @@ window.showTVShowDetailContextMenu = function() {
         }
     }
     
-    // Add to Favorites
+    // Add to / Remove from Quickplay
+    const isQLShowDetail = watchDataManager.isQuickplayShow(show.showPath);
     options.push({
-        icon: 'assets/icons/heart-outline.svg',
-        label: 'Add to Favorites',
-        action: 'add-favorites'
+        icon: isQLShowDetail ? 'assets/icons/bolt-slash.svg' : 'assets/icons/bolt.svg',
+        label: isQLShowDetail ? 'Remove from Quickplay' : 'Add to Quickplay',
+        action: 'add-quickplay'
     });
-    
+
     // Show the context menu
     contextMenu.show(options, (action) => {
         handleTVShowDetailContextMenuAction(action);
@@ -9308,12 +9741,17 @@ function handleTVShowDetailContextMenuAction(action) {
             }
             break;
             
-        case 'add-favorites':
-            alert('Add to Favorites is not connected yet');
+        case 'add-quickplay': {
+            if (watchDataManager.isQuickplayShow(show.showPath)) {
+                watchDataManager.removeQuickplayShow(show.showPath);
+            } else {
+                watchDataManager.addQuickplayShow(show.showPath);
+            }
             if (window.keyboardNav) {
                 setTimeout(() => window.keyboardNav.focusItem(), 50);
             }
             break;
+        }
     }
 }
 
@@ -9352,27 +9790,28 @@ window.showMovieContextMenu = function(movieCard) {
         action: isWatched ? 'unwatch-movie' : 'watch-movie'
     });
     
-    // Add to Favorites
+    // Add to / Remove from Favorites
+    const isFavMovieGrid = watchDataManager.isFavoriteMovie(videoPath);
     options.push({
-        icon: 'assets/icons/heart-outline.svg',
-        label: 'Add to Favorites',
+        icon: isFavMovieGrid ? 'assets/icons/heart-fill.svg' : 'assets/icons/heart-outline.svg',
+        label: isFavMovieGrid ? 'Remove from Favorites' : 'Add to Favorites',
         action: 'add-favorites'
     });
-    
+
     // Add to Playlist
     options.push({
         icon: 'assets/icons/add-to-playlist.svg',
         label: 'Add to Playlist',
         action: 'add-playlist'
     });
-    
+
     // Select Multiple
     options.push({
         icon: 'assets/icons/square-check.svg',
         label: 'Select Multiple',
         action: 'select-multiple'
     });
-    
+
     // Show the context menu
     contextMenu.show(options, (action) => {
         handleMovieGridContextMenuAction(action, videoPath);
@@ -9437,14 +9876,30 @@ function handleMovieGridContextMenuAction(action, videoPath) {
             }
             break;
             
-        case 'add-favorites':
-            alert('Add to Favorites is not connected yet');
+        case 'add-favorites': {
+            const isFav = watchDataManager.isFavoriteMovie(videoPath);
+            if (isFav) {
+                watchDataManager.removeFavoriteMovie(videoPath);
+            } else {
+                watchDataManager.addFavoriteMovie(videoPath);
+            }
+            const nowFavGrid = !isFav;
+            // If removing on the favorites page, remove the card from fav view
+            if (!nowFavGrid && currentLibrary === 'favorites' && movieCard) {
+                movieCard.remove();
+                if (typeof keyboardNav !== 'undefined') {
+                    keyboardNav.updateItems('.favorites-card');
+                }
+            }
+            // Sync badge across both grids
+            syncFavoritesBadge(videoPath, nowFavGrid);
             break;
-            
+        }
+
         case 'add-playlist':
             showAddToPlaylistOverlay(videoPath);
             break;
-            
+
         case 'select-multiple':
             enterMultiSelectMode();
             break;
@@ -9461,10 +9916,14 @@ function enterMultiSelectMode() {
     window.multiSelectMode = true;
     window.multiSelectItems = new Set(); // Store selected video paths
     
-    // Add multi-select class to movie grid
+    // Add multi-select class to movie grid (or favorites grid if on favorites page)
     const movieGrid = document.getElementById('movieGrid');
     if (movieGrid) {
         movieGrid.classList.add('multi-select-mode');
+    }
+    if (currentLibrary === 'favorites') {
+        const favGrid = document.querySelector('#favoritesView .movie-grid');
+        if (favGrid) favGrid.classList.add('multi-select-mode');
     }
     
     // Add checkbox badges to all movie cards
@@ -9499,11 +9958,13 @@ function exitMultiSelectMode() {
     window.multiSelectMode = false;
     window.multiSelectItems = new Set();
     
-    // Remove multi-select class from movie grid
+    // Remove multi-select class from movie grid and favorites grid
     const movieGrid = document.getElementById('movieGrid');
     if (movieGrid) {
         movieGrid.classList.remove('multi-select-mode');
     }
+    const favGrid = document.querySelector('#favoritesView .movie-grid');
+    if (favGrid) favGrid.classList.remove('multi-select-mode');
     
     // Remove checkbox badges and selected state from all cards
     const cards = document.querySelectorAll('.movie-card');
@@ -9604,32 +10065,38 @@ function removeMultiSelectIndicator() {
  */
 function showMultiSelectContextMenu() {
     if (!window.multiSelectMode) return;
-    
+
     const count = window.multiSelectItems ? window.multiSelectItems.size : 0;
-    
+    const selectedPaths = Array.from(window.multiSelectItems || []);
+
+    const allWatched = selectedPaths.every(p => { const ws = watchDataManager.getWatchStatus(p); return ws && ws.watched; });
+    const allUnwatched = selectedPaths.every(p => { const ws = watchDataManager.getWatchStatus(p); return !ws || !ws.watched; });
+    const allFavorited = selectedPaths.every(p => watchDataManager.isFavoriteMovie(p));
+    const allUnfavorited = selectedPaths.every(p => !watchDataManager.isFavoriteMovie(p));
+
     const options = [
         {
             icon: 'assets/icons/add-to-playlist.svg',
             label: `Add ${count} to Playlist`,
             action: 'multi-add-playlist'
-        },
-        {
-            icon: 'assets/icons/watched.svg',
-            label: 'Mark as Watched',
-            action: 'multi-watch'
-        },
-        {
-            icon: 'assets/icons/unwatched.svg',
-            label: 'Mark as Unwatched',
-            action: 'multi-unwatch'
-        },
-        {
-            icon: 'assets/icons/square-xmark.svg',
-            label: 'Cancel',
-            action: 'multi-cancel'
         }
     ];
-    
+
+    if (!allWatched) {
+        options.push({ icon: 'assets/icons/watched.svg', label: 'Mark as Watched', action: 'multi-watch' });
+    }
+    if (!allUnwatched) {
+        options.push({ icon: 'assets/icons/unwatched.svg', label: 'Mark as Unwatched', action: 'multi-unwatch' });
+    }
+    if (!allFavorited) {
+        options.push({ icon: 'assets/icons/heart-fill.svg', label: 'Add to Favorites', action: 'multi-favorite' });
+    }
+    if (!allUnfavorited) {
+        options.push({ icon: 'assets/icons/heart-outline.svg', label: 'Remove from Favorites', action: 'multi-unfavorite' });
+    }
+
+    options.push({ icon: 'assets/icons/square-xmark.svg', label: 'Cancel', action: 'multi-cancel' });
+
     contextMenu.show(options, (action) => {
         handleMultiSelectContextMenuAction(action);
     });
@@ -9691,6 +10158,34 @@ function handleMultiSelectContextMenuAction(action) {
             exitMultiSelectMode();
             break;
             
+        case 'multi-favorite':
+            selectedPaths.forEach(videoPath => {
+                watchDataManager.addFavoriteMovie(videoPath);
+                syncFavoritesBadge(videoPath, true);
+            });
+            exitMultiSelectMode();
+            showPlaylistToast(`Added ${selectedPaths.length} to Favorites`, 'success');
+            break;
+
+        case 'multi-unfavorite':
+            selectedPaths.forEach(videoPath => {
+                watchDataManager.removeFavoriteMovie(videoPath);
+                // On favorites page — also remove the card from the fav grid
+                if (currentLibrary === 'favorites') {
+                    const favGrid = document.querySelector('#favoritesView .movie-grid');
+                    const card = favGrid ? favGrid.querySelector(`.movie-card[data-video-path="${CSS.escape(videoPath)}"]`) : null;
+                    if (card) card.remove();
+                }
+                // Sync badge across both grids (removes badge from movie grid)
+                syncFavoritesBadge(videoPath, false);
+            });
+            exitMultiSelectMode();
+            if (currentLibrary === 'favorites' && typeof keyboardNav !== 'undefined') {
+                keyboardNav.updateItems('.favorites-card');
+            }
+            showPlaylistToast(`Removed ${selectedPaths.length} from Favorites`, 'success');
+            break;
+
         case 'multi-cancel':
             exitMultiSelectMode();
             break;
@@ -9736,20 +10231,21 @@ window.showMovieDetailContextMenu = function() {
         action: isWatched ? 'unwatch-movie-detail' : 'watch-movie-detail'
     });
     
-    // Add to Favorites
+    // Add to / Remove from Favorites
+    const isFavMovieDetail = watchDataManager.isFavoriteMovie(videoPath);
     options.push({
-        icon: 'assets/icons/heart-outline.svg',
-        label: 'Add to Favorites',
+        icon: isFavMovieDetail ? 'assets/icons/heart-outline.svg' : 'assets/icons/heart-fill.svg',
+        label: isFavMovieDetail ? 'Remove from Favorites' : 'Add to Favorites',
         action: 'add-favorites'
     });
-    
+
     // Add to Playlist
     options.push({
         icon: 'assets/icons/add-to-playlist.svg',
         label: 'Add to Playlist',
         action: 'add-playlist'
     });
-    
+
     // Show the context menu
     contextMenu.show(options, (action) => {
         handleMovieDetailContextMenuAction(action);
@@ -9828,13 +10324,38 @@ function handleMovieDetailContextMenuAction(action) {
             openDetail(window.currentMovie, false, true);
             break;
             
-        case 'add-favorites':
-            alert('Add to Favorites is not connected yet');
-            if (window.keyboardNav) {
-                setTimeout(() => window.keyboardNav.focusItem(), 50);
+        case 'add-favorites': {
+            const isFav = watchDataManager.isFavoriteMovie(videoPath);
+            if (isFav) {
+                watchDataManager.removeFavoriteMovie(videoPath);
+            } else {
+                watchDataManager.addFavoriteMovie(videoPath);
             }
+            const nowFavDetail = !isFav;
+            // Update the detail page button
+            const favBtn = document.querySelector('.detail-button[data-fav-movie]');
+            if (favBtn) {
+                favBtn.querySelector('.detail-button-icon').src = `assets/icons/${nowFavDetail ? 'heart-fill' : 'heart-outline'}.svg`;
+                favBtn.querySelector('.detail-button-text').textContent = nowFavDetail ? 'Remove from Favorites' : 'Add to Favorites';
+            }
+            // Update favorites badge on the detail poster
+            const detailPoster = document.querySelector('.detail-poster-container');
+            if (detailPoster) {
+                const existing = detailPoster.querySelector('.favorites-badge');
+                if (nowFavDetail && !existing) {
+                    const badge = document.createElement('div');
+                    badge.className = 'favorites-badge';
+                    badge.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.23125 13.8433L10.7016 21.7512C11.0531 22.0793 11.5172 22.2621 12 22.2621C12.4828 22.2621 12.9469 22.0793 13.2984 21.7512L21.7687 13.8433C23.1937 12.5168 24 10.6558 24 8.71053V8.43865C24 5.16209 21.6328 2.36834 18.4031 1.82928C16.2656 1.47303 14.0906 2.17147 12.5625 3.69959L12 4.26209L11.4375 3.69959C9.90938 2.17147 7.73438 1.47303 5.59688 1.82928C2.36719 2.36834 0 5.16209 0 8.43865V8.71053C0 10.6558 0.80625 12.5168 2.23125 13.8433Z" fill="white"/></svg>`;
+                    detailPoster.appendChild(badge);
+                } else if (!nowFavDetail && existing) {
+                    existing.remove();
+                }
+            }
+            // Sync badge across both grids
+            syncFavoritesBadge(videoPath, nowFavDetail);
             break;
-            
+        }
+
         case 'add-playlist':
             showAddToPlaylistOverlay(videoPath);
             break;
@@ -9884,20 +10405,21 @@ window.showTVSeasonContextMenu = function(seasonNumber) {
         }
     }
     
-    // Add to Favorites
+    // Add to / Remove from Quickplay
+    const isQLTVSeasonMenu = window.currentShow && watchDataManager.isQuickplayShow(window.currentShow.showPath);
     options.push({
-        icon: 'assets/icons/heart-outline.svg',
-        label: 'Add to Favorites',
-        action: 'add-favorites'
+        icon: isQLTVSeasonMenu ? 'assets/icons/bolt-slash.svg' : 'assets/icons/bolt.svg',
+        label: isQLTVSeasonMenu ? 'Remove from Quickplay' : 'Add to Quickplay',
+        action: 'add-quickplay'
     });
-    
+
     // Add to Playlist
     options.push({
         icon: 'assets/icons/add-to-playlist.svg',
         label: 'Add to Playlist',
         action: 'add-playlist'
     });
-    
+
     // Show menu
     contextMenu.show(options, (action) => {
         handleTVSeasonContextMenuAction(action, season);
@@ -9959,10 +10481,20 @@ function handleTVSeasonContextMenuAction(action, season) {
             }
             break;
             
-        case 'add-favorites':
-            alert('Add to Favorites is not connected yet');
+        case 'add-quickplay': {
+            if (window.currentShow) {
+                if (watchDataManager.isQuickplayShow(window.currentShow.showPath)) {
+                    watchDataManager.removeQuickplayShow(window.currentShow.showPath);
+                } else {
+                    watchDataManager.addQuickplayShow(window.currentShow.showPath);
+                }
+            }
+            if (window.keyboardNav) {
+                setTimeout(() => window.keyboardNav.focusItem(), 50);
+            }
             break;
-            
+        }
+
         case 'add-playlist':
             // TV season context - not supported for now (movies only)
             alert('Playlists only support movies for now');
@@ -10029,20 +10561,21 @@ window.showSeasonContextMenu = function() {
         }
     }
     
-    // Add to Favorites
+    // Add to / Remove from Quickplay
+    const isQLSeasonDetail = window.currentShow && watchDataManager.isQuickplayShow(window.currentShow.showPath);
     options.push({
-        icon: 'assets/icons/heart-outline.svg',
-        label: 'Add to Favorites',
-        action: 'add-favorites'
+        icon: isQLSeasonDetail ? 'assets/icons/bolt-slash.svg' : 'assets/icons/bolt.svg',
+        label: isQLSeasonDetail ? 'Remove from Quickplay' : 'Add to Quickplay',
+        action: 'add-quickplay'
     });
-    
+
     // Add to Playlist
     options.push({
         icon: 'assets/icons/add-to-playlist.svg',
         label: 'Add to Playlist',
         action: 'add-playlist'
     });
-    
+
     // Show menu
     contextMenu.show(options, (action) => {
         handleSeasonContextMenuAction(action, focusedEpisode);
@@ -10114,12 +10647,18 @@ function handleSeasonContextMenuAction(action, focusedEpisode) {
             }
             break;
             
-        case 'add-favorites':
-            alert('Add to Favorites is not connected yet');
-            // Restore focus since we're not refreshing
+        case 'add-quickplay': {
+            if (window.currentShow) {
+                if (watchDataManager.isQuickplayShow(window.currentShow.showPath)) {
+                    watchDataManager.removeQuickplayShow(window.currentShow.showPath);
+                } else {
+                    watchDataManager.addQuickplayShow(window.currentShow.showPath);
+                }
+            }
             restoreSeasonDetailFocus();
             break;
-            
+        }
+
         case 'add-playlist':
             // TV episode context - not supported for now (movies only)
             alert('Playlists only support movies for now');
@@ -10247,7 +10786,16 @@ window.showHomeContextMenu = function() {
     
     // Continue Watching specific options
     if (isContinueWatching) {
-        // 0. Go to Detail
+        // 0. Play from Beginning (only if item has progress)
+        if (hasProgress) {
+            options.push({
+                icon: 'assets/icons/restart.svg',
+                label: 'Play from Beginning',
+                action: 'play-from-beginning'
+            });
+        }
+
+        // 1. Go to Detail
         options.push({
             icon: 'assets/icons/info.svg',
             label: 'Go to Detail',
@@ -10295,13 +10843,18 @@ window.showHomeContextMenu = function() {
             });
         }
         
-        // 3. Add to Favorites
-        options.push({
-            icon: 'assets/icons/heart-outline.svg',
-            label: 'Add to Favorites',
-            action: 'add-favorites'
-        });
-        
+        // 3. Add to / Remove from Favorites
+        const isTVItem = item.type === 'tv';
+        if (!isTVItem) {
+            // Favorites for movies only
+            const isFavHomeItem = watchDataManager.isFavoriteMovie(videoPath);
+            options.push({
+                icon: isFavHomeItem ? 'assets/icons/heart-fill.svg' : 'assets/icons/heart-outline.svg',
+                label: isFavHomeItem ? 'Remove from Favorites' : 'Add to Favorites',
+                action: 'add-favorites'
+            });
+        }
+
         // 4. Add to Playlist
         options.push({
             icon: 'assets/icons/add-to-playlist.svg',
@@ -10309,7 +10862,7 @@ window.showHomeContextMenu = function() {
             action: 'add-playlist'
         });
     }
-    
+
     // Show the context menu
     contextMenu.show(options, (action) => {
         handleHomeContextMenuAction(action, item, videoPath);
@@ -10320,6 +10873,42 @@ function handleHomeContextMenuAction(action, item, videoPath) {
     const isTVEpisode = item.type === 'tv';
 
     switch (action) {
+        case 'play-from-beginning': {
+            // Clear saved progress immediately
+            watchDataManager.clearPosition(videoPath);
+
+            // Save home state so showHomeScreen(true) restores correctly on close
+            const pfbScrollPositions = [];
+            homeCarousels.forEach((_, index) => {
+                const scrollContainer = document.getElementById(`homeCarouselScroll-${index}`);
+                pfbScrollPositions.push(scrollContainer ? scrollContainer.scrollLeft : 0);
+            });
+            homeStateBeforeDetail = {
+                carouselIndex: currentCarouselIndex,
+                cardIndex: currentCardIndex,
+                videoPath: videoPath,
+                carouselId: homeCarousels[currentCarouselIndex] ? homeCarousels[currentCarouselIndex].id : null,
+                scrollPositions: pfbScrollPositions
+            };
+            localStorage.setItem('cameFromHome', 'true');
+
+            isHomeActive = false;
+            if (isTVEpisode) {
+                const { show, season, episode } = item.data;
+                window.currentShow = show;
+                window.currentSeason = season;
+                window.shuffleMode = false;
+                window.shuffleQueue = [];
+                const seasonEp = `S${season.number.toString().padStart(2, '0')} E${episode.episode.toString().padStart(2, '0')}`;
+                window.playTVEpisode(episode.videoPath, 0, show.title, seasonEp, episode.title);
+            } else {
+                const metadata = buildMovieOSDMetadata(item.data);
+                window.currentMovieMetadata = metadata;
+                window.playMovieWithMetadata(item.data.videoPath, 0, metadata);
+            }
+            break;
+        }
+
         case 'go-to-detail': {
             // Save home state for return navigation
             const scrollPositions = [];
@@ -10494,11 +11083,18 @@ function handleHomeContextMenuAction(action, item, videoPath) {
             }
             break;
             
-        case 'add-favorites':
-            // TODO: Implement favorites
-            console.log('Add to favorites:', videoPath);
+        case 'add-favorites': {
+            // Movies only
+            const isFav = watchDataManager.isFavoriteMovie(videoPath);
+            if (isFav) {
+                watchDataManager.removeFavoriteMovie(videoPath);
+            } else {
+                watchDataManager.addFavoriteMovie(videoPath);
+            }
+            syncFavoritesBadge(videoPath, !isFav);
             break;
-            
+        }
+
         case 'add-playlist':
             showAddToPlaylistOverlay(videoPath);
             break;
@@ -10543,20 +11139,21 @@ window.showMovieCarouselContextMenu = function(cardElement) {
         action: isWatched ? 'mark-unwatched' : 'mark-watched'
     });
     
-    // 3. Add to Favorites
+    // 3. Add to / Remove from Favorites
+    const isFavCarousel = watchDataManager.isFavoriteMovie(videoPath);
     options.push({
-        icon: 'assets/icons/heart-outline.svg',
-        label: 'Add to Favorites',
+        icon: isFavCarousel ? 'assets/icons/heart-fill.svg' : 'assets/icons/heart-outline.svg',
+        label: isFavCarousel ? 'Remove from Favorites' : 'Add to Favorites',
         action: 'add-favorites'
     });
-    
+
     // 4. Add to Playlist
     options.push({
         icon: 'assets/icons/add-to-playlist.svg',
         label: 'Add to Playlist',
         action: 'add-playlist'
     });
-    
+
     // Show the context menu
     contextMenu.show(options, (action) => {
         handleMovieCarouselContextMenuAction(action, videoPath, cardElement);
@@ -10615,11 +11212,17 @@ function handleMovieCarouselContextMenuAction(action, videoPath, cardElement) {
             }
             break;
             
-        case 'add-favorites':
-            // TODO: Implement favorites
-            console.log('Add to favorites:', videoPath);
+        case 'add-favorites': {
+            const isFav = watchDataManager.isFavoriteMovie(videoPath);
+            if (isFav) {
+                watchDataManager.removeFavoriteMovie(videoPath);
+            } else {
+                watchDataManager.addFavoriteMovie(videoPath);
+            }
+            syncFavoritesBadge(videoPath, !isFav);
             break;
-            
+        }
+
         case 'add-playlist':
             showAddToPlaylistOverlay(videoPath);
             break;
